@@ -1143,7 +1143,7 @@ async function sb(method, path, body) {
       toast(`DB エラー (${res.status}): ${msg}`, 'error');
       return { data: null, error: data };
     }
-    return { data, error: null };
+    return { data: data, error: null };
   } catch (e) {
     console.error('Network error:', e);
     toast(`通信エラー: ${e.message}`, 'error');
@@ -1189,8 +1189,8 @@ function toast(msg, type) { if (type === undefined) type = 'info';
 // NAV
 // ============================================================
 function showPage(id, el) {
-  document.querySelectorAll('.page').forEach(function(p) { return p.classList.remove('active'); });
-  document.querySelectorAll('.nav-item').forEach(function(n) { return n.classList.remove('active'); });
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
   const page = document.getElementById('page-' + id);
   if (page) page.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(function(n) {
@@ -1509,7 +1509,7 @@ async function loadRequests() {
   var _pAll = await Promise.all([
     sbGet('travel_requests?select=*&order=created_at.desc'),
     sbGet('travel_allowance_details?select=*')
-  ]);
+  ]); var reqRes=_pAll[0], detRes=_pAll[1];
   if (reqRes.data) allRequests = reqRes.data;
   if (detRes.data) allDetails = detRes.data;
   applySearch();
@@ -1517,21 +1517,21 @@ async function loadRequests() {
 
 function filterOffice(office, btn) {
   currentOfficeDash = office;
-  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(function(b) { return b.classList.remove('active'); });
+  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
   loadDashboard();
 }
 
 function filterOfficeReq(office, btn) {
   currentOfficeReq = office;
-  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(function(b) { return b.classList.remove('active'); });
+  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
   applySearch();
 }
 
 function filterStatus(status, btn) {
   currentStatus = status;
-  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(function(b) { return b.classList.remove('active'); });
+  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
   applySearch();
 }
@@ -2136,7 +2136,7 @@ function removeMemberRow(id) {
 
 async function saveRequest() {
   const travelType = document.getElementById('fTravelType').value;
-  const taskName = document.getElementById('fTaskName').value.trim() || document.getElementById('fTaskId').(selectedOptions[0] && selectedOptions[0].text);
+  const taskName = document.getElementById('fTaskName').value.trim() || (function(){ var el=document.getElementById('fTaskId'); return (el.selectedOptions[0] && el.selectedOptions[0].text) || ''; })();
   const taskId = document.getElementById('fTaskId').value || null;
   const paymentDate = document.getElementById('fPaymentDate').value || null;
   const notes = document.getElementById('fNotes').value.trim() || null;
@@ -2159,7 +2159,7 @@ async function saveRequest() {
     const name = nameSel.value;
     const amount = parseInt(amountInput.value) || 0;
     if (name) {
-      members.push({ name, amount, detId: row.dataset.detId || null });
+      members.push({ name: name, amount: amount, detId: row.dataset.detId || null });
     }
   });
 
@@ -2175,7 +2175,7 @@ async function saveRequest() {
     task_id: taskId, task_name: taskName, travel_type: travelType,
     office: office,
     start_date: calStartDate, end_date: endDate,
-    payment_date: paymentDate, notes, status: 'pending'
+    payment_date: paymentDate, notes: notes, status: 'pending'
   };
 
   if (editingId) {
@@ -2183,24 +2183,25 @@ async function saveRequest() {
     if (res.error) { toast('保存に失敗しました', 'error'); btn.innerHTML = '💾 保存する'; btn.disabled = false; return; }
   } else {
     const res = await sbPost('travel_requests', reqData);
-    if (res.error || !res.data?.[0]) { toast('保存に失敗しました', 'error'); btn.innerHTML = '💾 保存する'; btn.disabled = false; return; }
+    if (res.error || !(res.data && res.data[0])) { toast('保存に失敗しました', 'error'); btn.innerHTML = '💾 保存する'; btn.disabled = false; return; }
     reqId = res.data[0].id;
   }
 
   // Upsert members
-  members.forEach(function(m) {
-    const detData = {
+  var memberPromises = members.map(function(m) {
+    var detData = {
       request_id: reqId,
       employee_name: m.name,
       travel_type: travelType,
       allowance_amount: m.amount
     };
     if (m.detId) {
-      await sbPatch(`travel_allowance_details?id=eq.${m.detId}`, detData);
+      return sbPatch('travel_allowance_details?id=eq.' + m.detId, detData);
     } else {
-      await sbPost('travel_allowance_details', detData);
+      return sbPost('travel_allowance_details', detData);
     }
   });
+  await Promise.all(memberPromises);
 
   toast(editingId ? '更新しました ✅' : '登録しました ✅', 'success');
   closeModal('requestModal');
@@ -2297,11 +2298,11 @@ async function saveEmployee() {
   const dept = document.getElementById('eeDept').value || null;
   if (!name) { toast('氏名を入力してください', 'error'); return; }
   if (id) {
-    const res = await sbPatch(`employees?id=eq.${id}`, { name, department: dept });
+    const res = await sbPatch(`employees?id=eq.${id}`, { name: name, department: dept });
     if (res.error) return;
     toast(`${name} を更新しました ✅`, 'success');
   } else {
-    const res = await sbPost('employees', { name, department: dept });
+    const res = await sbPost('employees', { name: name, department: dept });
     if (res.error) return;
     toast(`${name} を追加しました ✅`, 'success');
   }
