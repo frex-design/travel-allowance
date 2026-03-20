@@ -1175,7 +1175,7 @@ let calStep = 0; // 0: pick start, 1: pick end
 // ============================================================
 // TOAST
 // ============================================================
-function toast(msg, type = 'info') {
+function toast(msg, type) { if (type === undefined) type = 'info';
   const c = document.getElementById('toastContainer');
   const el = document.createElement('div');
   el.className = `toast ${type}`;
@@ -2077,7 +2077,12 @@ function getFilteredEmpOptions(selectedName) {
   return filtered.map(e => `<option value="${e.name}" ${e.name === selectedName ? 'selected' : ''}>${e.name}</option>`).join('');
 }
 
-function addMemberRow(name = '', amount = 0, isRefunded = false, detId = null, office = '') {
+function addMemberRow(name, amount, isRefunded, detId, office) {
+  if (name === undefined) name = '';
+  if (amount === undefined) amount = 0;
+  if (isRefunded === undefined) isRefunded = false;
+  if (detId === undefined) detId = null;
+  if (office === undefined) office = '';
   memberRowCount++;
   const id = `member-${memberRowCount}`;
   const empOptions = getFilteredEmpOptions(name);
