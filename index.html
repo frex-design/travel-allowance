@@ -1104,7 +1104,7 @@ function openConfig() {
 }
 
 // Auto-fill config on load
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', function() {
   if (SUPABASE_URL && SUPABASE_KEY) {
     document.getElementById('configOverlay').style.display = 'none';
     loadAll();
@@ -1150,10 +1150,10 @@ async function sb(method, path, body) {
     return { data: null, error: e.message };
   }
 }
-const sbGet = (path) => sb('GET', path);
-const sbPost = (path, body) => sb('POST', path, body);
-const sbPatch = (path, body) => sb('PATCH', path, body);
-const sbDelete = (path) => sb('DELETE', path);
+function sbGet(path) { return sb('GET', path);
+function sbPost(path, body) { return sb('POST', path, body);
+function sbPatch(path, body) { return sb('PATCH', path, body);
+function sbDelete(path) { return sb('DELETE', path);
 
 // ============================================================
 // STATE
@@ -1182,18 +1182,18 @@ function toast(msg, type) { if (type === undefined) type = 'info';
   const icons = { success: '✅', error: '❌', info: 'ℹ️' };
   el.innerHTML = `<span>${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
   c.appendChild(el);
-  setTimeout(() => el.remove(), 3500);
+  setTimeout(function() { return el.remove(), 3500);
 }
 
 // ============================================================
 // NAV
 // ============================================================
 function showPage(id, el) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(function(p) { return p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(function(n) { return n.classList.remove('active'));
   const page = document.getElementById('page-' + id);
   if (page) page.classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => {
+  document.querySelectorAll('.nav-item').forEach(function(n) {
     if ((n.getAttribute('onclick')||'').indexOf(id) !== -1) n.classList.add('active');
   });
   if (id === 'dashboard') loadDashboard();
@@ -1228,25 +1228,25 @@ async function loadDashboard() {
     // 事業所フィルター
     const officeReqs = currentOfficeDash === 'all'
       ? allRequests
-      : allRequests.filter(r => r.office === currentOfficeDash);
+      : allRequests.filter(function(r) { return r.office === currentOfficeDash);
 
     // ── 今月の支給合計（当月 start_date のデータをすべて合計）──
-    const monthlyReqs = officeReqs.filter(r => {
+    const monthlyReqs = officeReqs.filter(function(r) {
       if (r.status === 'cancelled') return false;
       const dateKey = r.start_date || r.payment_date || '';
       return dateKey.startsWith(month);
     });
-    const monthlyTotal = monthlyReqs.reduce((s, r) => {
-      const dets = allDetails.filter(d => d.request_id === r.id && !d.is_refunded);
-      return s + dets.reduce((a, d) => a + (d.allowance_amount || 0), 0);
+    const monthlyTotal = monthlyReqs.reduce(function(s, r) {
+      const dets = allDetails.filter(function(d) { return d.request_id === r.id && !d.is_refunded);
+      return s + dets.reduce(function(a, d) { return a + (d.allowance_amount || 0), 0);
     }, 0);
 
-    const paidCount    = officeReqs.filter(r => r.status === 'paid').length;
-    const pendingCount = officeReqs.filter(r => r.status === 'pending').length;
-    const officeIds    = officeReqs.map(r => r.id);
+    const paidCount    = officeReqs.filter(function(r) { return r.status === 'paid').length;
+    const pendingCount = officeReqs.filter(function(r) { return r.status === 'pending').length;
+    const officeIds    = officeReqs.map(function(r) { return r.id);
     const refundedTotal = allDetails
-      .filter(d => d.is_refunded && officeIds.includes(d.request_id))
-      .reduce((s, d) => s + (d.allowance_amount || 0), 0);
+      .filter(function(d) { return d.is_refunded && officeIds.includes(d.request_id))
+      .reduce(function(s, d) { return s + (d.allowance_amount || 0), 0);
 
     document.getElementById('stat-monthly').textContent  = `¥${monthlyTotal.toLocaleString()}`;
     document.getElementById('stat-paid').textContent     = paidCount;
@@ -1456,11 +1456,11 @@ function renderTaskSummary(reqs) {
 
   // 業務名でグループ化
   const map = {};
-  reqs.forEach(r => {
+  reqs.forEach(function(r) {
     const key = r.task_name || '（未設定）';
     if (!map[key]) map[key] = { count: 0, members: 0, paid: 0, pending: 0 };
-    const dets = allDetails.filter(d => d.request_id === r.id && !d.is_refunded);
-    const total = dets.reduce((s, d) => s + (d.allowance_amount || 0), 0);
+    const dets = allDetails.filter(function(d) { return d.request_id === r.id && !d.is_refunded);
+    const total = dets.reduce(function(s, d) { return s + (d.allowance_amount || 0), 0);
     map[key].count++;
     map[key].members += dets.length;
     if (r.status === 'paid')    map[key].paid    += total;
@@ -1476,7 +1476,7 @@ function renderTaskSummary(reqs) {
   // 合計行用
   let sumCount = 0, sumMembers = 0, sumPaid = 0, sumPending = 0;
 
-  tbody.innerHTML = keys.sort().map(key => {
+  tbody.innerHTML = keys.sort().map(function(key) {
     const g = map[key];
     const total = g.paid + g.pending;
     sumCount   += g.count;
@@ -1517,21 +1517,21 @@ async function loadRequests() {
 
 function filterOffice(office, btn) {
   currentOfficeDash = office;
-  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(function(b) { return b.classList.remove('active'));
   btn.classList.add('active');
   loadDashboard();
 }
 
 function filterOfficeReq(office, btn) {
   currentOfficeReq = office;
-  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(function(b) { return b.classList.remove('active'));
   btn.classList.add('active');
   applySearch();
 }
 
 function filterStatus(status, btn) {
   currentStatus = status;
-  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(function(b) { return b.classList.remove('active'));
   btn.classList.add('active');
   applySearch();
 }
@@ -1539,13 +1539,13 @@ function filterStatus(status, btn) {
 function applySearch() {
   const q = ((document.getElementById('searchInput') && document.getElementById('searchInput').value) || '').toLowerCase();
   let filtered = allRequests;
-  if (currentOfficeReq !== 'all') filtered = filtered.filter(r => r.office === currentOfficeReq);
-  if (currentStatus !== 'all') filtered = filtered.filter(r => r.status === currentStatus);
+  if (currentOfficeReq !== 'all') filtered = filtered.filter(function(r) { return r.office === currentOfficeReq);
+  if (currentStatus !== 'all') filtered = filtered.filter(function(r) { return r.status === currentStatus);
   if (q) {
-    filtered = filtered.filter(r => {
+    filtered = filtered.filter(function(r) {
       const taskMatch = (r.task_name && r.task_name.toLowerCase().includes(q));
-      const memberMatch = allDetails.filter(d => d.request_id === r.id)
-        .some(d => (d.employee_name && d.employee_name.toLowerCase().includes(q)));
+      const memberMatch = allDetails.filter(function(d) { return d.request_id === r.id)
+        .some(function(d) { return (d.employee_name && d.employee_name.toLowerCase().includes(q)));
       return taskMatch || memberMatch;
     });
   }
@@ -1558,10 +1558,10 @@ function renderRequestsTable(tableId, reqs, simple) {
     tbody.innerHTML = `<tr class="no-data-row"><td colspan="${simple?6:9}">データがありません</td></tr>`;
     return;
   }
-  tbody.innerHTML = reqs.map(r => {
-    const dets = allDetails.filter(d => d.request_id === r.id);
-    const total = dets.filter(d => !d.is_refunded).reduce((s,d) => s + d.allowance_amount, 0);
-    const refunded = dets.filter(d => d.is_refunded).reduce((s,d) => s + d.allowance_amount, 0);
+  tbody.innerHTML = reqs.map(function(r) {
+    const dets = allDetails.filter(function(d) { return d.request_id === r.id);
+    const total = dets.filter(function(d) { return !d.is_refunded).reduce(function(s, d) { return s + d.allowance_amount, 0);
+    const refunded = dets.filter(function(d) { return d.is_refunded).reduce(function(s, d) { return s + d.allowance_amount, 0);
     const typeLabel = { day_trip:'🚗 日帰り', overnight:'🏨 宿泊', night_shift:'🌙 夜勤' }[r.travel_type] || r.travel_type;
     const typeBadge = { day_trip:'badge-day', overnight:'badge-overnight', night_shift:'badge-night' }[r.travel_type] || '';
     const period = r.start_date === r.end_date ? r.start_date : `${r.start_date} 〜 ${r.end_date}`;
@@ -1607,11 +1607,11 @@ function renderRequestsTable(tableId, reqs, simple) {
 // DETAIL
 // ============================================================
 async function showDetail(id) {
-  const r = allRequests.find(x => x.id === id);
+  const r = allRequests.filter(function(x){ return x.id === id; })[0];
   if (!r) return;
-  const dets = allDetails.filter(d => d.request_id === id);
-  const total = dets.reduce((s,d) => s + d.allowance_amount, 0);
-  const refunded = dets.filter(d => d.is_refunded).reduce((s,d) => s + d.allowance_amount, 0);
+  const dets = allDetails.filter(function(d) { return d.request_id === id);
+  const total = dets.reduce(function(s, d) { return s + d.allowance_amount, 0);
+  const refunded = dets.filter(function(d) { return d.is_refunded).reduce(function(s, d) { return s + d.allowance_amount, 0);
   const typeLabel = { day_trip:'🚗 日帰り', overnight:'🏨 宿泊', night_shift:'🌙 夜勤' }[r.travel_type] || r.travel_type;
   const statusMap = { pending: ['badge-pending','未支給'], paid: ['badge-paid','支給済'], cancelled: ['badge-cancelled','キャンセル'], refunded: ['badge-refunded','返還済'] };
   const [sc, sl] = statusMap[r.status] || ['',''];
@@ -1657,7 +1657,7 @@ async function showDetail(id) {
           <th style="padding:8px 12px;font-size:11px;color:var(--text3);text-align:left;font-weight:600;letter-spacing:.5px;text-transform:uppercase">ステータス</th>
         </tr></thead>
         <tbody>
-          ${dets.map(d => `<tr>
+          ${dets.map(function(d) { return `<tr>
             <td style="padding:10px 12px;border-top:1px solid var(--border);font-weight:500">${d.employee_name}</td>
             <td style="padding:10px 12px;border-top:1px solid var(--border);font-family:var(--mono);font-weight:600;color:${d.is_refunded?'var(--red)':'var(--green)'}">
               ${d.is_refunded ? `<s>¥${d.allowance_amount.toLocaleString()}</s>` : `¥${d.allowance_amount.toLocaleString()}`}
@@ -1783,7 +1783,7 @@ function updateAmounts() {
 function updateTotal() {
   const inputs = document.querySelectorAll('#membersBody .member-amount');
   let total = 0;
-  inputs.forEach(inp => {
+  inputs.forEach(function(inp) {
     const val = parseInt(inp.value) || 0;
     total += val;
   });
@@ -1828,7 +1828,7 @@ async function openNewRequest() {
 }
 
 async function editRequest(id) {
-  const r = allRequests.find(x => x.id === id);
+  const r = allRequests.filter(function(x){ return x.id === id; })[0];
   if (!r) return;
   editingId = id;
   document.getElementById('requestModalTitle').textContent = '出張手当 編集';
@@ -1861,9 +1861,9 @@ async function editRequest(id) {
   setMiniText('payText',       r.payment_date);
   updateDateDisplay();
 
-  const dets = allDetails.filter(d => d.request_id === id);
+  const dets = allDetails.filter(function(d) { return d.request_id === id);
   document.getElementById('membersBody').innerHTML = '';
-  dets.forEach(d => addMemberRow(d.employee_name, d.allowance_amount, d.is_refunded, d.id));
+  dets.forEach(function(d) { return addMemberRow(d.employee_name, d.allowance_amount, d.is_refunded, d.id));
   updateTotal();
   openModal('requestModal');
 }
@@ -1871,14 +1871,14 @@ async function editRequest(id) {
 function onTaskChange() {
   const sel = document.getElementById('fTaskId');
   if (sel.value) {
-    const t = tasks.find(x => x.id === sel.value);
+    const t = tasks.filter(function(x){ return x.id === sel.value; })[0];
     if (t) document.getElementById('fTaskName').value = t.task_name;
   }
 }
 
 function onOfficeChange() {
   // 事業所が変わったらメンバーselectの選択肢を絞り込む
-  document.querySelectorAll('#membersBody tr').forEach(row => {
+  document.querySelectorAll('#membersBody tr').forEach(function(row) {
     const sel = row.querySelector('.member-name');
     const currentName = (row.querySelector('.member-name-input') && row.querySelector('.member-name-input').value) || '';
     if (sel) {
@@ -2057,14 +2057,14 @@ async function populateSelects() {
   
   const taskSel = document.getElementById('fTaskId');
   taskSel.innerHTML = '<option value="">業務を選択...</option>' +
-    tasks.filter(t => t.is_active).map(t => `<option value="${t.id}">${t.task_name}</option>`).join('');
+    tasks.filter(function(t) { return t.is_active).map(function(t) { return `<option value="${t.id}">${t.task_name}</option>`).join('');
 }
 
 let memberRowCount = 0;
 function getFilteredEmpOptions(selectedName) {
   const office = (document.getElementById('fOffice') && document.getElementById('fOffice').value) || '';
-  const filtered = employees.filter(e => e.is_active && (!office || e.department === office));
-  return filtered.map(e => `<option value="${e.name}" ${e.name === selectedName ? 'selected' : ''}>${e.name}</option>`).join('');
+  const filtered = employees.filter(function(e) { return e.is_active && (!office || e.department === office));
+  return filtered.map(function(e) { return `<option value="${e.name}" ${e.name === selectedName ? 'selected' : ''}>${e.name}</option>`).join('');
 }
 
 function addMemberRow(name, amount, isRefunded, detId, office) {
@@ -2076,7 +2076,7 @@ function addMemberRow(name, amount, isRefunded, detId, office) {
   memberRowCount++;
   const id = `member-${memberRowCount}`;
   const empOptions = getFilteredEmpOptions(name);
-  const emp = employees.find(e => e.name === name);
+  const emp = employees.filter(function(e){ return e.name === name; })[0];
   const empOffice = office || (emp && emp.department) || '';
 
   const row = document.createElement('tr');
@@ -2111,7 +2111,7 @@ function addMemberRow(name, amount, isRefunded, detId, office) {
 function updateMemberName(sel) {
   const row = sel.closest('tr');
   if (sel.value) {
-    const emp = employees.find(e => e.name === sel.value);
+    const emp = employees.filter(function(e){ return e.name === sel.value; })[0];
     const officeCell = row.querySelector('.member-office-cell');
     if (officeCell) {
       officeCell.textContent = (emp && emp.department) || '';
@@ -2152,7 +2152,7 @@ async function saveRequest() {
   const endDate = calEndDate || calStartDate;
 
   const members = [];
-  document.querySelectorAll('#membersBody tr').forEach(row => {
+  document.querySelectorAll('#membersBody tr').forEach(function(row) {
     const nameSel = row.querySelector('.member-name');
     const amountInput = row.querySelector('.member-amount');
     if (!nameSel || !amountInput) return;
@@ -2236,7 +2236,7 @@ async function loadEmployees() {
         </tr>
       </thead>
       <tbody>
-        ${employees.map((e, i) => `
+        ${employees.map(function(e, i) { return `
           <tr style="border-top:1px solid var(--border);${!e.is_active ? 'opacity:.5' : ''}">
             <td style="padding:8px 10px;text-align:center">
               <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
@@ -2273,7 +2273,7 @@ function openAddEmployee() {
 }
 
 function openEditEmployee(id) {
-  const e = employees.find(x => x.id === id);
+  const e = employees.filter(function(x){ return x.id === id; })[0];
   if (!e) return;
   document.getElementById('eeId').value = e.id;
   document.getElementById('eeName').value = e.name;
@@ -2363,7 +2363,7 @@ async function loadTasks() {
         </tr>
       </thead>
       <tbody>
-        ${tasks.map(t => `
+        ${tasks.map(function(t) { return `
           <tr style="border-top:1px solid var(--border);${!t.is_active ? 'opacity:.5' : ''}">
             <td style="padding:10px 14px;font-weight:500">🔧 ${t.task_name}</td>
             <td style="padding:10px 14px;color:var(--text2);font-size:13px">${t.description || '—'}</td>
@@ -2394,7 +2394,7 @@ function openAddTask() {
 }
 
 function openEditTask(id) {
-  const t = tasks.find(x => x.id === id);
+  const t = tasks.filter(function(x){ return x.id === id; })[0];
   if (!t) return;
   document.getElementById('taskId').value = t.id;
   document.getElementById('taskName').value = t.task_name;
