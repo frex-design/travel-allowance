@@ -940,27 +940,16 @@
           </div>
           <input type="hidden" id="fPaymentDate" />
         </div>
-        <div class="form-group full">
-          <label>出張期間 *</label>
-          <div class="date-range-container">
-            <div class="date-range-display placeholder" id="dateRangeDisplay" onclick="toggleCalendar()">
-              <span>📅</span>
-              <span id="dateRangeText">日付を選択（クリックでカレンダー表示）</span>
-            </div>
-            <div id="calendarPopup" style="display:none;margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;">
-              <div id="calTypeHint" style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:8px;">まず出張タイプを選択してください</div>
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                <button class="cal-nav" onclick="prevMonth()">◀</button>
-                <span id="calMonthYear" style="font-weight:700;font-size:14px;"></span>
-                <button class="cal-nav" onclick="nextMonth()">▶</button>
-              </div>
-              <div id="calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;"></div>
-              <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                <button class="btn btn-ghost btn-sm" onclick="clearCalendar()">クリア</button>
-                <button class="btn btn-primary btn-sm" onclick="applyCalendar()">確定</button>
-              </div>
-            </div>
-          </div>
+        <div class="form-group">
+          <label>出張開始日 *</label>
+          <input type="date" id="calStartInput" onchange="onDateInputChange()" />
+        </div>
+        <div class="form-group">
+          <label>出張終了日 *</label>
+          <input type="date" id="calEndInput" onchange="onDateInputChange()" />
+        </div>
+        <div class="form-group full" id="amountBreakdownRow" style="display:none">
+          <div id="amountBreakdown" style="background:rgba(181,96,26,.08);border:1px solid rgba(181,96,26,.2);border-radius:6px;padding:8px 14px;font-size:13px;color:var(--accent);font-weight:600;text-align:center"></div>
         </div>
         <div class="form-group full">
           <label>備考</label>
@@ -1581,8 +1570,8 @@ async function updateStatus(id, status) {
 // ============================================================
 function toggleCalendar() {
   const popup = document.getElementById('calendarPopup');
-  if (popup.classList.contains('open')) {
-    popup.classList.remove('open');
+  if (popup.style.display === 'block') {
+    popup.style.display = 'none';
     return;
   }
   const now = new Date();
@@ -1590,7 +1579,7 @@ function toggleCalendar() {
   calMonth = now.getMonth();
   if (!calStartDate) calStep = 0;
   drawCal();
-  popup.classList.add('open');
+  popup.style.display = 'block';
 }
 
 function prevMonth() { calMonth--; if (calMonth < 0)  { calMonth=11; calYear--; } drawCal(); }
@@ -1604,42 +1593,65 @@ function drawCal() {
     hint.textContent = 'まず出張タイプを選択してください';
     hint.style.color = 'var(--amber)';
   } else if (calStep === 1) {
-    hint.textContent = '\u2705 開始日選択済 \u2192 終了日をクリック';
+    hint.textContent = '開始日選択済 → 終了日をクリック';
     hint.style.color = 'var(--accent)';
   } else {
-    hint.textContent = '\u2460 開始日 \u2192 \u2461 終了日 の順にクリック';
+    hint.textContent = '① 開始日 → ② 終了日 の順にクリック';
     hint.style.color = 'var(--text3)';
   }
-  const mNames=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-  document.getElementById('calMonthYear').textContent = calYear+'年 '+mNames[calMonth];
-  const td=new Date();
-  const todayStr=td.getFullYear()+'-'+String(td.getMonth()+1).padStart(2,'0')+'-'+String(td.getDate()).padStart(2,'0');
-  const rangeEnd=calEndDate||calHover||null;
-  let lo=null,hi=null;
-  if(calStartDate&&rangeEnd){lo=calStartDate<rangeEnd?calStartDate:rangeEnd;hi=calStartDate<rangeEnd?rangeEnd:calStartDate;}
-  else if(calStartDate){lo=hi=calStartDate;}
-  const firstDay=new Date(calYear,calMonth,1).getDay();
-  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
-  const grid=document.getElementById('calGrid');
-  grid.innerHTML='';
-  ['日','月','火','水','木','金','土'].forEach(function(n){const e=document.createElement('div');e.className='cal-day-name';e.textContent=n;grid.appendChild(e);});
-  for(let i=0;i<firstDay;i++){const e=document.createElement('div');e.className='cal-day empty';grid.appendChild(e);}
-  for(let d=1;d<=daysInMonth;d++){
-    const ds=calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    let cls='cal-day';
-    if(ds===todayStr)cls+=' today';
-    if(lo&&hi){
-      if(ds===lo&&ds===hi)cls+=' start end';
-      else if(ds===lo)cls+=' start';
-      else if(ds===hi)cls+=' end';
-      else if(ds>lo&&ds<hi)cls+=' in-range';
+
+  const mNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  document.getElementById('calMonthYear').textContent = calYear + '年 ' + mNames[calMonth];
+
+  const td = new Date();
+  const todayStr = td.getFullYear() + '-' + String(td.getMonth()+1).padStart(2,'0') + '-' + String(td.getDate()).padStart(2,'0');
+
+  const rangeEnd = calEndDate || calHover || null;
+  let lo = null, hi = null;
+  if (calStartDate && rangeEnd) {
+    lo = calStartDate < rangeEnd ? calStartDate : rangeEnd;
+    hi = calStartDate < rangeEnd ? rangeEnd : calStartDate;
+  } else if (calStartDate) {
+    lo = hi = calStartDate;
+  }
+
+  const firstDay    = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const dayNames    = ['日','月','火','水','木','金','土'];
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  dayNames.forEach(function(n) {
+    var h = document.createElement('div');
+    h.className = 'cal-day-name';
+    h.textContent = n;
+    grid.appendChild(h);
+  });
+
+  for (var i = 0; i < firstDay; i++) {
+    var e = document.createElement('div');
+    e.className = 'cal-day empty';
+    grid.appendChild(e);
+  }
+
+  for (var d = 1; d <= daysInMonth; d++) {
+    var ds = calYear + '-' + String(calMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    var cls = 'cal-day';
+    if (ds === todayStr) cls += ' today';
+    if (lo && hi) {
+      if      (ds === lo && ds === hi) cls += ' start end';
+      else if (ds === lo)              cls += ' start';
+      else if (ds === hi)              cls += ' end';
+      else if (ds > lo && ds < hi)    cls += ' in-range';
     }
-    const cell=document.createElement('div');
-    cell.className=cls;
-    cell.textContent=d;
-    (function(dateStr){
-      cell.addEventListener('click',function(){calDayClick(dateStr);});
-      cell.addEventListener('mouseenter',function(){calDayHover(dateStr);});
+    var cell = document.createElement('div');
+    cell.className = cls;
+    cell.textContent = String(d);
+    cell.style.cursor = 'pointer';
+    (function(dateStr) {
+      cell.onclick = function() { calDayClick(dateStr); };
+      cell.onmouseenter = function() { calDayHover(dateStr); };
     })(ds);
     grid.appendChild(cell);
   }
@@ -1688,7 +1700,7 @@ function applyCalendar() {
   if (!calStartDate) { toast('日付を選択してください', 'error'); return; }
   if (!calEndDate) calEndDate = calStartDate;
   calHover = null; calStep = 0;
-  document.getElementById('calendarPopup').classList.remove('open');
+  document.getElementById('calendarPopup').style.display = 'none';
   updateDateDisplay();
   updateAmounts();
 }
@@ -1703,26 +1715,7 @@ function fmtDate(ds) {
 }
 
 function updateDateDisplay() {
-  const display = document.getElementById('dateRangeDisplay');
-  const text = document.getElementById('dateRangeText');
-  if (calStartDate) {
-    const end = calEndDate || calStartDate;
-    const days = Math.floor((new Date(end) - new Date(calStartDate)) / 86400000) + 1;
-    const nights = days - 1;
-    const travelType = document.getElementById('fTravelType').value;
-    if (calStartDate === end) {
-      text.textContent = fmtDate(calStartDate);
-    } else {
-      const info = travelType === 'overnight' ? `（${nights}泊${days}日）` : `（${days}日間）`;
-      text.textContent = `${fmtDate(calStartDate)}  〜  ${fmtDate(end)}  ${info}`;
-    }
-    display.classList.remove('placeholder');
-    display.classList.add('has-value');
-  } else {
-    text.textContent = '日付を選択（クリックでカレンダー表示）';
-    display.classList.add('placeholder');
-    display.classList.remove('has-value');
-  }
+  // date input 方式では特に何もしない（inputに直接表示されるため）
 }
 
 // カレンダーは同一モーダル内インラインなので外クリック閉じ不要
@@ -1815,6 +1808,10 @@ function openNewRequest() {
   if (payTxt) { payTxt.textContent = '未設定'; payTxt.style.color = 'var(--text3)'; }
   document.getElementById('fNotes').value = '';
   calStartDate = null; calEndDate = null; calHover = null; calStep = 0;
+  const si = document.getElementById('calStartInput');
+  const ei = document.getElementById('calEndInput');
+  if (si) si.value = '';
+  if (ei) ei.value = '';
   updateDateDisplay();
   document.getElementById('membersBody').innerHTML = '';
   document.getElementById('totalAmountDisplay').textContent = '¥0';
@@ -1846,7 +1843,11 @@ async function editRequest(id) {
   }
   document.getElementById('fNotes').value = r.notes || '';
   calStartDate = r.start_date;
-  calEndDate = r.end_date;
+  calEndDate   = r.end_date;
+  const si2 = document.getElementById('calStartInput');
+  const ei2 = document.getElementById('calEndInput');
+  if (si2) si2.value = r.start_date || '';
+  if (ei2) ei2.value = r.end_date   || '';
   updateDateDisplay();
 
   const dets = allDetails.filter(d => d.request_id === id);
@@ -1877,16 +1878,18 @@ function onOfficeChange() {
 }
 
 function onTravelTypeChange() {
-  // 期間選択済みなら金額を再計算、未選択なら内訳表示をリセット
+  onDateInputChange();
+}
+
+function onDateInputChange() {
+  const startEl = document.getElementById('calStartInput');
+  const endEl   = document.getElementById('calEndInput');
+  calStartDate  = startEl ? startEl.value : null;
+  calEndDate    = endEl   ? endEl.value   : null;
+  if (!calEndDate) calEndDate = calStartDate;
   if (calStartDate) {
+    updateDateDisplay();
     updateAmounts();
-  } else {
-    const bdEl = document.getElementById('amountBreakdown');
-    if (bdEl) bdEl.style.display = 'none';
-    // メンバー行の表示もリセット
-    document.querySelectorAll('#membersBody .amount-display').forEach(el => {
-      el.textContent = '—';
-    });
   }
 }
 
