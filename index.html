@@ -1,0 +1,1821 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>出張手当管理 | 株式会社フレックスデザイン</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf7f4;
+    --surface: #ffffff;
+    --surface2: #f4f0ec;
+    --border: #e2d8ce;
+    --accent: #b5601a;
+    --accent2: #c4856a;
+    --green: #3a7d44;
+    --amber: #b07a10;
+    --red: #b84040;
+    --purple: #6b4fa0;
+    --text: #2c1f14;
+    --text2: #6b5244;
+    --text3: #a08878;
+    --radius: 10px;
+    --font: 'Noto Sans JP', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    position: relative;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 80% 60% at 10% 15%, rgba(217,150,100,0.10) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 88% 80%, rgba(196,149,106,0.08) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 50% at 50% 45%, rgba(240,210,180,0.12) 0%, transparent 70%);
+  }
+  body > * { position: relative; z-index: 1; }
+
+  /* ===== HEADER ===== */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .header-logo {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, #c4702a, #d4956a);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .header-title { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+  .header-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .header-actions { display: flex; gap: 8px; }
+
+  /* ===== LAYOUT ===== */
+  .layout { display: flex; min-height: calc(100vh - 58px); }
+  .sidebar {
+    width: 220px; min-width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    position: sticky;
+    top: 58px;
+    height: calc(100vh - 58px);
+    overflow-y: auto;
+  }
+  .sidebar-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text3);
+    letter-spacing: 1px;
+    padding: 0 20px 8px;
+    text-transform: uppercase;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 20px;
+    cursor: pointer;
+    color: var(--text2);
+    font-size: 13px;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(181,96,26,.10); color: var(--accent); border-left-color: var(--accent); }
+  .nav-icon { font-size: 15px; width: 20px; text-align: center; }
+
+  .main { flex: 1; padding: 28px; overflow-x: hidden; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ===== PAGE HEADER ===== */
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .page-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .page-desc { color: var(--text3); font-size: 13px; margin-top: 4px; }
+
+  /* ===== SUMMARY CARDS ===== */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .stat-label { font-size: 11px; color: var(--text3); font-weight: 500; margin-bottom: 8px; letter-spacing: 0.5px; }
+  .stat-value { font-size: 24px; font-weight: 700; font-family: var(--mono); }
+  .stat-value.blue { color: var(--accent); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.amber { color: var(--amber); }
+  .stat-value.red { color: var(--red); }
+
+  /* ===== TABLE ===== */
+  .table-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .table-toolbar {
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .table-toolbar-left { display: flex; align-items: center; gap: 10px; }
+  .search-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    width: 220px;
+    transition: border 0.15s;
+  }
+  .search-box:focus { border-color: var(--accent); }
+  .search-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 13px;
+    width: 100%;
+    font-family: var(--font);
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: var(--surface2); }
+  th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  td {
+    padding: 11px 14px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    vertical-align: middle;
+  }
+  tr:hover td { background: rgba(181,96,26,.04); }
+
+  /* ===== BADGES ===== */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+  .badge-pending { background: rgba(176,122,16,.12); color: #8a5e08; }
+  .badge-paid { background: rgba(58,125,68,.12); color: #2d6235; }
+  .badge-cancelled { background: rgba(160,136,120,.15); color: #6b5244; }
+  .badge-refunded { background: rgba(184,64,64,.12); color: #8c3030; }
+  .badge-day { background: rgba(181,96,26,.12); color: #7a430e; }
+  .badge-overnight { background: rgba(107,79,160,.12); color: #4e3780; }
+  .badge-night { background: rgba(196,133,106,.18); color: #7a4a28; }
+
+  /* ===== BUTTONS ===== */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    font-family: var(--font);
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #934e14; }
+  .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+  .btn-danger { background: rgba(184,64,64,.10); color: var(--red); border: 1px solid rgba(184,64,64,.25); }
+  .btn-danger:hover { background: rgba(184,64,64,.18); }
+  .btn-success { background: rgba(58,125,68,.10); color: var(--green); border: 1px solid rgba(58,125,68,.25); }
+  .btn-success:hover { background: rgba(58,125,68,.18); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-icon { padding: 6px 8px; }
+
+  /* ===== MODAL ===== */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(44,31,20,.35);
+    backdrop-filter: blur(4px);
+    z-index: 500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    width: 100%;
+    max-width: 680px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: modalIn 0.2s ease;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(-12px) scale(.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .modal-header {
+    padding: 20px 24px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-title { font-size: 17px; font-weight: 700; }
+  .modal-close {
+    background: none; border: none; cursor: pointer;
+    color: var(--text3); font-size: 20px; padding: 4px;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+  .modal-close:hover { color: var(--text); }
+  .modal-body { padding: 24px; }
+  .modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  /* ===== FORM ===== */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 12px; font-weight: 600; color: var(--text2); letter-spacing: 0.3px; }
+  input, select, textarea {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 11px;
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    font-family: var(--font);
+    transition: border 0.15s;
+    width: 100%;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--text3); }
+  select option { background: var(--surface2); }
+  textarea { resize: vertical; min-height: 70px; }
+
+  .form-section {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 16px;
+  }
+  .form-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text3);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  /* ===== MEMBERS TABLE ===== */
+  .members-table { width: 100%; border-collapse: collapse; }
+  .members-table th {
+    background: var(--surface2);
+    padding: 8px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    letter-spacing: 0.5px;
+    text-align: left;
+  }
+  .members-table td { padding: 7px 6px; border-top: 1px solid var(--border); }
+  .members-table td input, .members-table td select {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+  .amount-display {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--green);
+    font-size: 13px;
+    min-width: 80px;
+  }
+  .delete-row-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text3);
+    padding: 4px;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: color 0.15s;
+  }
+  .delete-row-btn:hover { color: var(--red); }
+
+  /* ===== CALENDAR PICKER ===== */
+  .date-range-container {
+    position: relative;
+  }
+  .date-range-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 11px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    transition: border 0.15s;
+    user-select: none;
+  }
+  .date-range-display:hover { border-color: var(--accent); }
+  .date-range-display.has-value { color: var(--text); }
+  .date-range-display.placeholder { color: var(--text3); }
+  .calendar-popup {
+    position: fixed;
+    z-index: 600;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.6);
+    min-width: 320px;
+    display: none;
+  }
+  .calendar-popup.open { display: block; }
+  .cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .cal-nav {
+    background: none; border: none; cursor: pointer;
+    color: var(--text2); font-size: 16px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .cal-nav:hover { background: var(--border); color: var(--text); }
+  .cal-month-year { font-weight: 700; font-size: 14px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal-day-name {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text3);
+    padding: 4px;
+    letter-spacing: 0.5px;
+  }
+  .cal-day {
+    text-align: center;
+    padding: 7px 4px;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: all 0.1s;
+    user-select: none;
+  }
+  .cal-day:hover:not(.empty):not(.disabled) { background: var(--border); }
+  .cal-day.empty { cursor: default; }
+  .cal-day.disabled { color: var(--text3); cursor: default; opacity: .4; }
+  .cal-day.today { color: var(--accent); font-weight: 700; }
+  .cal-day.start { background: var(--accent); color: #fff; border-radius: 5px 0 0 5px; }
+  .cal-day.end { background: var(--accent); color: #fff; border-radius: 0 5px 5px 0; }
+  .cal-day.start.end { border-radius: 5px; }
+  .cal-day.in-range { background: rgba(59,130,246,.2); border-radius: 0; }
+  .cal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+  .cal-type-hint {
+    font-size: 11px;
+    color: var(--text3);
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  /* ===== DETAIL PANEL ===== */
+  .detail-section { margin-bottom: 20px; }
+  .detail-label { font-size: 11px; font-weight: 600; color: var(--text3); letter-spacing: 0.5px; margin-bottom: 6px; text-transform: uppercase; }
+  .detail-value { font-size: 14px; color: var(--text); }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .amount-big { font-size: 28px; font-weight: 700; font-family: var(--mono); color: var(--green); }
+
+  /* ===== TOAST ===== */
+  .toast-container { position: fixed; top: 70px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: toastIn .2s ease;
+    min-width: 260px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.10);
+  }
+  .toast.success { border-left: 3px solid var(--green); }
+  .toast.error { border-left: 3px solid var(--red); }
+  .toast.info { border-left: 3px solid var(--accent); }
+  @keyframes toastIn { from { opacity:0; transform: translateX(20px); } to { opacity:1; transform: translateX(0); } }
+
+  /* ===== EMPTY STATE ===== */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text3);
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: .4; }
+  .empty-text { font-size: 14px; }
+
+  /* ===== TABS ===== */
+  .tabs { display: flex; gap: 4px; background: var(--surface2); border-radius: 8px; padding: 4px; margin-bottom: 20px; width: fit-content; }
+  .tab-btn {
+    padding: 7px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: var(--text3);
+    font-family: var(--font);
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .tab-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+
+  /* ===== SETTINGS ===== */
+  .settings-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .settings-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .settings-desc { font-size: 12px; color: var(--text3); margin-bottom: 16px; }
+  .employee-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    margin: 4px;
+  }
+  .chip-remove {
+    background: none; border: none; cursor: pointer;
+    color: var(--text3); font-size: 13px;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+  .chip-remove:hover { color: var(--red); }
+
+  /* ===== CONFIG ===== */
+  .config-banner {
+    background: rgba(176,122,16,.08);
+    border: 1px solid rgba(176,122,16,.22);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 13px;
+    color: #8a5e08;
+  }
+  .config-banner.hidden { display: none; }
+
+  /* ===== AMOUNT INFO BOX ===== */
+  .amount-info {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .amount-info-item {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .amount-info-label { font-size: 11px; color: var(--text3); }
+  .amount-info-value { font-size: 16px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+
+  /* ===== REFUND NOTICE ===== */
+  .refund-notice {
+    background: rgba(184,64,64,.08);
+    border: 1px solid rgba(184,64,64,.18);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #8c3030;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .form-grid { grid-template-columns: 1fr; }
+    .detail-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .amount-info { grid-template-columns: 1fr; }
+  }
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+  .loading-spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .no-data-row td { text-align: center; color: var(--text3); padding: 32px; }
+</style>
+</head>
+<body>
+
+<!-- ===== CONFIG ===== -->
+<div id="configOverlay" class="modal-overlay open" style="z-index:2000">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <div class="modal-title">⚙️ Supabase 接続設定</div>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text2);font-size:13px;margin-bottom:20px;line-height:1.6;">
+        Supabase の接続情報を入力してください。<br>
+        <span style="color:var(--text3)">入力値はブラウザのローカルストレージに保存されます。</span>
+      </p>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="form-group">
+          <label>Supabase URL</label>
+          <input id="cfgUrl" placeholder="https://xxxxxxxxxx.supabase.co" />
+        </div>
+        <div class="form-group">
+          <label>Anon Key</label>
+          <input id="cfgKey" type="password" placeholder="eyJ..." />
+        </div>
+      </div>
+      <div style="margin-top:14px;padding:12px;background:var(--surface2);border-radius:6px;font-size:12px;color:var(--text3);line-height:1.6;">
+        <strong style="color:var(--text2)">📍 取得場所：</strong> Supabase ダッシュボード →  cashflow プロジェクト →<br>
+        Settings → API → Project URL / Project API Keys (anon public)
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="skipConfig()">あとで設定</button>
+      <button class="btn btn-primary" onclick="saveConfig()">💾 保存して接続</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ===== HEADER ===== -->
+<header>
+  <div class="header-brand">
+    <div class="header-logo">🛣️</div>
+    <div>
+      <div class="header-title">出張手当管理システム</div>
+      <div class="header-sub">株式会社フレックスデザイン</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-ghost btn-sm" onclick="openConfig()">⚙️ 設定</button>
+    <button class="btn btn-primary btn-sm" onclick="openNewRequest()">＋ 新規登録</button>
+  </div>
+</header>
+
+<!-- ===== LAYOUT ===== -->
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-label">メニュー</div>
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <span class="nav-icon">📊</span>ダッシュボード
+    </div>
+    <div class="nav-item" onclick="showPage('requests')">
+      <span class="nav-icon">📋</span>出張手当一覧
+    </div>
+    <div class="nav-item" onclick="showPage('employees')">
+      <span class="nav-icon">👥</span>社員マスタ
+    </div>
+    <div class="nav-item" onclick="showPage('tasks')">
+      <span class="nav-icon">🔧</span>業務マスタ
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <!-- ===== DASHBOARD ===== -->
+    <div id="page-dashboard" class="page active">
+      <div class="page-header">
+        <div>
+          <div class="page-title">ダッシュボード</div>
+          <div class="page-desc">出張手当の支給状況サマリー</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadDashboard()">🔄 更新</button>
+      </div>
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="stat-label">今月の支給合計</div>
+          <div class="stat-value blue" id="stat-monthly">¥ —</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">支給済件数</div>
+          <div class="stat-value green" id="stat-paid">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">未支給件数</div>
+          <div class="stat-value amber" id="stat-pending">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">返還合計</div>
+          <div class="stat-value red" id="stat-refunded">¥ —</div>
+        </div>
+      </div>
+      <div class="table-container">
+        <div class="table-toolbar">
+          <div style="font-size:13px;font-weight:600">最近の出張手当</div>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('requests')">すべて見る →</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>業務名</th>
+              <th>出張タイプ</th>
+              <th>期間</th>
+              <th>人数</th>
+              <th>支給合計</th>
+              <th>ステータス</th>
+            </tr>
+          </thead>
+          <tbody id="recentTable">
+            <tr class="no-data-row"><td colspan="6">読み込み中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== REQUESTS ===== -->
+    <div id="page-requests" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">出張手当一覧</div>
+          <div class="page-desc">すべての出張手当申請・支給履歴</div>
+        </div>
+        <button class="btn btn-primary" onclick="openNewRequest()">＋ 新規登録</button>
+      </div>
+      <div class="tabs">
+        <button class="tab-btn active" onclick="filterStatus('all', this)">すべて</button>
+        <button class="tab-btn" onclick="filterStatus('pending', this)">未支給</button>
+        <button class="tab-btn" onclick="filterStatus('paid', this)">支給済</button>
+        <button class="tab-btn" onclick="filterStatus('refunded', this)">返還</button>
+        <button class="tab-btn" onclick="filterStatus('cancelled', this)">キャンセル</button>
+      </div>
+      <div class="table-container">
+        <div class="table-toolbar">
+          <div class="table-toolbar-left">
+            <div class="search-box">
+              <span>🔍</span>
+              <input class="search-input" placeholder="業務名・氏名で検索" id="searchInput" oninput="applySearch()" />
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadRequests()">🔄 更新</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>支給日</th>
+              <th>業務名</th>
+              <th>出張タイプ</th>
+              <th>期間</th>
+              <th>参加人数</th>
+              <th>支給合計</th>
+              <th>ステータス</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="requestsTable">
+            <tr class="no-data-row"><td colspan="8">読み込み中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== EMPLOYEES ===== -->
+    <div id="page-employees" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">社員マスタ</div>
+          <div class="page-desc">出張対象社員の管理</div>
+        </div>
+        <button class="btn btn-primary" onclick="openAddEmployee()">＋ 社員追加</button>
+      </div>
+      <div class="settings-card">
+        <div class="settings-title">登録社員一覧</div>
+        <div class="settings-desc">出張手当申請時に選択できる社員の一覧です。</div>
+        <div id="employeeList" style="min-height:40px">読み込み中...</div>
+      </div>
+    </div>
+
+    <!-- ===== TASKS ===== -->
+    <div id="page-tasks" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">業務マスタ</div>
+          <div class="page-desc">点検業務の管理</div>
+        </div>
+        <button class="btn btn-primary" onclick="openAddTask()">＋ 業務追加</button>
+      </div>
+      <div class="settings-card">
+        <div class="settings-title">登録業務一覧</div>
+        <div class="settings-desc">出張手当申請時に選択できる業務の一覧です。</div>
+        <div id="taskList" style="min-height:40px">読み込み中...</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ===== MODAL: 新規登録/編集 ===== -->
+<div class="modal-overlay" id="requestModal">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header">
+      <div class="modal-title" id="requestModalTitle">出張手当 新規登録</div>
+      <button class="modal-close" onclick="closeModal('requestModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="amount-info">
+        <div class="amount-info-item">
+          <div class="amount-info-label">🚗 日帰り</div>
+          <div class="amount-info-value">¥1,500 / 日</div>
+        </div>
+        <div class="amount-info-item">
+          <div class="amount-info-label">🏨 宿泊</div>
+          <div class="amount-info-value">¥3,000 / 泊</div>
+        </div>
+        <div class="amount-info-item">
+          <div class="amount-info-label">🌙 夜勤</div>
+          <div class="amount-info-value">¥3,000 / 日</div>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>業務名 *</label>
+          <select id="fTaskId" onchange="onTaskChange()">
+            <option value="">業務を選択...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>業務名（直接入力・未登録業務）</label>
+          <input id="fTaskName" placeholder="または直接入力" />
+        </div>
+        <div class="form-group">
+          <label>出張タイプ *</label>
+          <select id="fTravelType" onchange="onTravelTypeChange()">
+            <option value="">選択してください</option>
+            <option value="day_trip">🚗 日帰り（¥1,500/日）</option>
+            <option value="overnight">🏨 宿泊（¥3,000/泊）</option>
+            <option value="night_shift">🌙 夜勤（¥3,000/日）</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>支給日</label>
+          <input type="date" id="fPaymentDate" />
+        </div>
+        <div class="form-group full">
+          <label>出張期間 *</label>
+          <div class="date-range-container">
+            <div class="date-range-display placeholder" id="dateRangeDisplay" onclick="toggleCalendar()">
+              <span>📅</span>
+              <span id="dateRangeText">日付を選択（クリックでカレンダー表示）</span>
+            </div>
+            <div class="calendar-popup" id="calendarPopup">
+              <div class="cal-type-hint" id="calTypeHint">まず出張タイプを選択してください</div>
+              <div class="cal-header">
+                <button class="cal-nav" onclick="prevMonth()">◀</button>
+                <span class="cal-month-year" id="calMonthYear"></span>
+                <button class="cal-nav" onclick="nextMonth()">▶</button>
+              </div>
+              <div class="cal-grid" id="calGrid"></div>
+              <div class="cal-actions">
+                <button class="btn btn-ghost btn-sm" onclick="clearCalendar()">クリア</button>
+                <button class="btn btn-primary btn-sm" onclick="applyCalendar()">確定</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group full">
+          <label>備考</label>
+          <textarea id="fNotes" placeholder="補足事項があれば入力"></textarea>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="form-section-title">👥 出張メンバー</div>
+          <button class="btn btn-ghost btn-sm" onclick="addMemberRow()">＋ メンバー追加</button>
+        </div>
+        <table class="members-table" id="membersTable">
+          <thead>
+            <tr>
+              <th>氏名 *</th>
+              <th>支給金額</th>
+              <th>返還</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="membersBody">
+          </tbody>
+        </table>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;align-items:center;gap:16px">
+          <span style="font-size:12px;color:var(--text3)">支給合計</span>
+          <span style="font-size:20px;font-weight:700;font-family:var(--mono);color:var(--green)" id="totalAmountDisplay">¥0</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('requestModal')">キャンセル</button>
+      <button class="btn btn-primary" id="saveRequestBtn" onclick="saveRequest()">
+        💾 保存する
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: 詳細表示 ===== -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <div class="modal-title">出張手当 詳細</div>
+      <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
+    </div>
+    <div class="modal-body" id="detailBody">
+    </div>
+    <div class="modal-footer" id="detailFooter">
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: 社員追加 ===== -->
+<div class="modal-overlay" id="employeeModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title">社員追加</div>
+      <button class="modal-close" onclick="closeModal('employeeModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>氏名 *</label>
+        <input id="eeName" placeholder="例：山田 太郎" />
+      </div>
+      <div class="form-group" style="margin-top:12px">
+        <label>部署</label>
+        <input id="eeDept" placeholder="例：点検部" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('employeeModal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveEmployee()">追加する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: 業務追加 ===== -->
+<div class="modal-overlay" id="taskModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title">業務追加</div>
+      <button class="modal-close" onclick="closeModal('taskModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>業務名 *</label>
+        <input id="taskName" placeholder="例：橋梁定期点検" />
+      </div>
+      <div class="form-group" style="margin-top:12px">
+        <label>説明</label>
+        <textarea id="taskDesc" placeholder="業務の説明（任意）" style="height:70px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('taskModal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveTask()">追加する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+let SUPABASE_URL = localStorage.getItem('supabase_url') || '';
+let SUPABASE_KEY = localStorage.getItem('supabase_key') || '';
+
+function saveConfig() {
+  SUPABASE_URL = document.getElementById('cfgUrl').value.trim().replace(/\/$/, '');
+  SUPABASE_KEY = document.getElementById('cfgKey').value.trim();
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    toast('URLとキーを入力してください', 'error'); return;
+  }
+  localStorage.setItem('supabase_url', SUPABASE_URL);
+  localStorage.setItem('supabase_key', SUPABASE_KEY);
+  closeModal('configOverlay');
+  document.getElementById('configOverlay').classList.remove('open');
+  toast('接続設定を保存しました ✅', 'success');
+  loadAll();
+}
+function skipConfig() {
+  document.getElementById('configOverlay').classList.remove('open');
+}
+function openConfig() {
+  document.getElementById('cfgUrl').value = SUPABASE_URL;
+  document.getElementById('cfgKey').value = SUPABASE_KEY;
+  document.getElementById('configOverlay').classList.add('open');
+}
+
+// Auto-fill config on load
+window.addEventListener('DOMContentLoaded', () => {
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    document.getElementById('configOverlay').classList.remove('open');
+    loadAll();
+  } else {
+    document.getElementById('cfgUrl').value = SUPABASE_URL;
+    document.getElementById('cfgKey').value = SUPABASE_KEY;
+  }
+});
+
+// ============================================================
+// SUPABASE API
+// ============================================================
+async function sb(method, path, body) {
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    toast('Supabase が未設定です', 'error');
+    return { data: null, error: 'Not configured' };
+  }
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'return=representation' : 'return=representation'
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!res.ok) return { data: null, error: data };
+  return { data, error: null };
+}
+const sbGet = (path) => sb('GET', path);
+const sbPost = (path, body) => sb('POST', path, body);
+const sbPatch = (path, body) => sb('PATCH', path, body);
+const sbDelete = (path) => sb('DELETE', path);
+
+// ============================================================
+// STATE
+// ============================================================
+let allRequests = [];
+let allDetails = [];
+let employees = [];
+let tasks = [];
+let currentStatus = 'all';
+let editingId = null;
+
+// Calendar state
+let calYear, calMonth;
+let calStartDate = null, calEndDate = null, calHover = null;
+let calStep = 0; // 0: pick start, 1: pick end
+
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg, type = 'info') {
+  const c = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  el.innerHTML = `<span>${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
+  c.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ============================================================
+// NAV
+// ============================================================
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  event.currentTarget && event.currentTarget.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick')?.includes(id)) n.classList.add('active');
+  });
+  if (id === 'dashboard') loadDashboard();
+  if (id === 'requests') loadRequests();
+  if (id === 'employees') loadEmployees();
+  if (id === 'tasks') loadTasks();
+}
+
+// ============================================================
+// LOAD ALL
+// ============================================================
+async function loadAll() {
+  await Promise.all([loadEmployees(), loadTasks()]);
+  loadDashboard();
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+async function loadDashboard() {
+  const now = new Date();
+  const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  
+  const [reqRes, detRes] = await Promise.all([
+    sbGet('travel_requests?select=*&order=created_at.desc'),
+    sbGet('travel_allowance_details?select=*')
+  ]);
+  
+  if (reqRes.data) allRequests = reqRes.data;
+  if (detRes.data) allDetails = detRes.data;
+
+  // Stats
+  const monthlyReqs = allRequests.filter(r =>
+    r.payment_date && r.payment_date.startsWith(month) && r.status === 'paid'
+  );
+  const monthlyTotal = monthlyReqs.reduce((s, r) => {
+    const dets = allDetails.filter(d => d.request_id === r.id && !d.is_refunded);
+    return s + dets.reduce((a, d) => a + d.allowance_amount, 0);
+  }, 0);
+  const paidCount = allRequests.filter(r => r.status === 'paid').length;
+  const pendingCount = allRequests.filter(r => r.status === 'pending').length;
+  const refundedTotal = allDetails.filter(d => d.is_refunded).reduce((s, d) => s + d.allowance_amount, 0);
+
+  document.getElementById('stat-monthly').textContent = `¥${monthlyTotal.toLocaleString()}`;
+  document.getElementById('stat-paid').textContent = paidCount;
+  document.getElementById('stat-pending').textContent = pendingCount;
+  document.getElementById('stat-refunded').textContent = `¥${refundedTotal.toLocaleString()}`;
+
+  // Recent table
+  renderRequestsTable('recentTable', allRequests.slice(0, 8), true);
+}
+
+// ============================================================
+// REQUESTS LIST
+// ============================================================
+async function loadRequests() {
+  const [reqRes, detRes] = await Promise.all([
+    sbGet('travel_requests?select=*&order=created_at.desc'),
+    sbGet('travel_allowance_details?select=*')
+  ]);
+  if (reqRes.data) allRequests = reqRes.data;
+  if (detRes.data) allDetails = detRes.data;
+  applySearch();
+}
+
+function filterStatus(status, btn) {
+  currentStatus = status;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applySearch();
+}
+
+function applySearch() {
+  const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
+  let filtered = allRequests;
+  if (currentStatus !== 'all') filtered = filtered.filter(r => r.status === currentStatus);
+  if (q) {
+    filtered = filtered.filter(r => {
+      const taskMatch = r.task_name?.toLowerCase().includes(q);
+      const memberMatch = allDetails.filter(d => d.request_id === r.id)
+        .some(d => d.employee_name?.toLowerCase().includes(q));
+      return taskMatch || memberMatch;
+    });
+  }
+  renderRequestsTable('requestsTable', filtered, false);
+}
+
+function renderRequestsTable(tableId, reqs, simple) {
+  const tbody = document.getElementById(tableId);
+  if (!reqs || reqs.length === 0) {
+    tbody.innerHTML = `<tr class="no-data-row"><td colspan="${simple?6:8}">データがありません</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = reqs.map(r => {
+    const dets = allDetails.filter(d => d.request_id === r.id);
+    const total = dets.filter(d => !d.is_refunded).reduce((s,d) => s + d.allowance_amount, 0);
+    const refunded = dets.filter(d => d.is_refunded).reduce((s,d) => s + d.allowance_amount, 0);
+    const typeLabel = { day_trip:'🚗 日帰り', overnight:'🏨 宿泊', night_shift:'🌙 夜勤' }[r.travel_type] || r.travel_type;
+    const typeBadge = { day_trip:'badge-day', overnight:'badge-overnight', night_shift:'badge-night' }[r.travel_type] || '';
+    const period = r.start_date === r.end_date ? r.start_date : `${r.start_date} 〜 ${r.end_date}`;
+    const statusMap = { pending: ['badge-pending','未支給'], paid: ['badge-paid','支給済'], cancelled: ['badge-cancelled','キャンセル'], refunded: ['badge-refunded','返還済'] };
+    const [sc, sl] = statusMap[r.status] || ['',''];
+    const refundNote = refunded > 0 ? `<div style="font-size:11px;color:var(--red);margin-top:2px">返還 ¥${refunded.toLocaleString()}</div>` : '';
+    
+    if (simple) {
+      return `<tr>
+        <td>${r.task_name}</td>
+        <td><span class="badge ${typeBadge}">${typeLabel}</span></td>
+        <td style="font-size:12px;color:var(--text2)">${period}</td>
+        <td style="font-family:var(--mono)">${dets.length}名</td>
+        <td><span style="font-family:var(--mono);font-weight:600;color:var(--green)">¥${total.toLocaleString()}</span>${refundNote}</td>
+        <td><span class="badge ${sc}">${sl}</span></td>
+      </tr>`;
+    }
+    return `<tr>
+      <td style="font-size:12px;color:var(--text2)">${r.payment_date || '—'}</td>
+      <td style="font-weight:500">${r.task_name}</td>
+      <td><span class="badge ${typeBadge}">${typeLabel}</span></td>
+      <td style="font-size:12px;color:var(--text2)">${period}</td>
+      <td style="font-family:var(--mono)">${dets.length}名</td>
+      <td><span style="font-family:var(--mono);font-weight:600;color:var(--green)">¥${total.toLocaleString()}</span>${refundNote}</td>
+      <td><span class="badge ${sc}">${sl}</span></td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-ghost btn-sm" onclick="showDetail('${r.id}')">詳細</button>
+          <button class="btn btn-ghost btn-sm" onclick="editRequest('${r.id}')">編集</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+// DETAIL
+// ============================================================
+async function showDetail(id) {
+  const r = allRequests.find(x => x.id === id);
+  if (!r) return;
+  const dets = allDetails.filter(d => d.request_id === id);
+  const total = dets.reduce((s,d) => s + d.allowance_amount, 0);
+  const refunded = dets.filter(d => d.is_refunded).reduce((s,d) => s + d.allowance_amount, 0);
+  const typeLabel = { day_trip:'🚗 日帰り', overnight:'🏨 宿泊', night_shift:'🌙 夜勤' }[r.travel_type] || r.travel_type;
+  const statusMap = { pending: ['badge-pending','未支給'], paid: ['badge-paid','支給済'], cancelled: ['badge-cancelled','キャンセル'], refunded: ['badge-refunded','返還済'] };
+  const [sc, sl] = statusMap[r.status] || ['',''];
+
+  document.getElementById('detailBody').innerHTML = `
+    <div class="detail-grid">
+      <div class="detail-section">
+        <div class="detail-label">業務名</div>
+        <div class="detail-value" style="font-weight:600;font-size:16px">${r.task_name}</div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-label">ステータス</div>
+        <div><span class="badge ${sc}" style="font-size:13px;padding:5px 12px">${sl}</span></div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-label">出張タイプ</div>
+        <div class="detail-value">${typeLabel}</div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-label">支給日</div>
+        <div class="detail-value">${r.payment_date || '未設定'}</div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-label">出張期間</div>
+        <div class="detail-value">${r.start_date} 〜 ${r.end_date}</div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-label">支給合計</div>
+        <div class="amount-big">¥${(total - refunded).toLocaleString()}</div>
+      </div>
+    </div>
+    ${r.notes ? `<div class="detail-section"><div class="detail-label">備考</div><div class="detail-value">${r.notes}</div></div>` : ''}
+    <div style="margin-top:16px">
+      <div class="detail-label" style="margin-bottom:10px">メンバー明細</div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:var(--surface2)">
+          <th style="padding:8px 12px;font-size:11px;color:var(--text3);text-align:left;font-weight:600;letter-spacing:.5px;text-transform:uppercase">氏名</th>
+          <th style="padding:8px 12px;font-size:11px;color:var(--text3);text-align:left;font-weight:600;letter-spacing:.5px;text-transform:uppercase">支給額</th>
+          <th style="padding:8px 12px;font-size:11px;color:var(--text3);text-align:left;font-weight:600;letter-spacing:.5px;text-transform:uppercase">ステータス</th>
+        </tr></thead>
+        <tbody>
+          ${dets.map(d => `<tr>
+            <td style="padding:10px 12px;border-top:1px solid var(--border);font-weight:500">${d.employee_name}</td>
+            <td style="padding:10px 12px;border-top:1px solid var(--border);font-family:var(--mono);font-weight:600;color:${d.is_refunded?'var(--red)':'var(--green)'}">
+              ${d.is_refunded ? `<s>¥${d.allowance_amount.toLocaleString()}</s>` : `¥${d.allowance_amount.toLocaleString()}`}
+            </td>
+            <td style="padding:10px 12px;border-top:1px solid var(--border)">
+              ${d.is_refunded
+                ? `<span class="badge badge-refunded">返還済 (${d.refund_date||''})</span>`
+                : `<span class="badge badge-paid">支給</span>
+                   <button class="btn btn-danger btn-sm" style="margin-left:6px" onclick="markRefund('${d.id}','${r.id}')">返還処理</button>`
+              }
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  const footer = document.getElementById('detailFooter');
+  let btns = `<button class="btn btn-ghost" onclick="closeModal('detailModal')">閉じる</button>
+    <button class="btn btn-ghost" onclick="editRequest('${r.id}');closeModal('detailModal')">✏️ 編集</button>`;
+  if (r.status === 'pending') {
+    btns += `<button class="btn btn-success" onclick="updateStatus('${r.id}','paid')">✅ 支給済にする</button>`;
+  }
+  if (r.status === 'paid') {
+    btns += `<button class="btn btn-danger" onclick="updateStatus('${r.id}','cancelled')">❌ キャンセル</button>`;
+  }
+  footer.innerHTML = btns;
+  openModal('detailModal');
+}
+
+async function markRefund(detId, reqId) {
+  const reason = prompt('返還理由を入力してください（任意）') ?? '';
+  const today = new Date().toISOString().split('T')[0];
+  const res = await sbPatch(`travel_allowance_details?id=eq.${detId}`, {
+    is_refunded: true, refund_date: today, refund_reason: reason
+  });
+  if (res.error) { toast('エラーが発生しました', 'error'); return; }
+  toast('返還処理を完了しました', 'success');
+  await loadRequests();
+  await showDetail(reqId);
+}
+
+async function updateStatus(id, status) {
+  const res = await sbPatch(`travel_requests?id=eq.${id}`, { status });
+  if (res.error) { toast('エラーが発生しました', 'error'); return; }
+  toast(`ステータスを更新しました`, 'success');
+  closeModal('detailModal');
+  loadDashboard();
+  loadRequests();
+}
+
+// ============================================================
+// CALENDAR
+// ============================================================
+function toggleCalendar() {
+  const popup = document.getElementById('calendarPopup');
+  if (popup.classList.contains('open')) {
+    popup.classList.remove('open');
+  } else {
+    const now = new Date();
+    calYear = now.getFullYear();
+    calMonth = now.getMonth();
+    if (!calStartDate) { calStep = 0; }
+    renderCalendar();
+    positionCalendar();
+    popup.classList.add('open');
+  }
+}
+
+function positionCalendar() {
+  const display = document.getElementById('dateRangeDisplay');
+  const popup = document.getElementById('calendarPopup');
+  const rect = display.getBoundingClientRect();
+  popup.style.top = (rect.bottom + 6) + 'px';
+  popup.style.left = rect.left + 'px';
+}
+
+function prevMonth() { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); }
+function nextMonth() { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderCalendar(); }
+
+function renderCalendar() {
+  const travelType = document.getElementById('fTravelType').value;
+  const hint = document.getElementById('calTypeHint');
+  if (!travelType) {
+    hint.textContent = 'まず出張タイプを選択してください';
+    hint.style.color = 'var(--amber)';
+  } else {
+    const msgs = { day_trip: '日帰り：出張日を選択（期間選択可）', overnight: '宿泊：出発日から帰着日まで選択', night_shift: '夜勤：夜勤日を選択（複数日可）' };
+    hint.textContent = msgs[travelType] || '';
+    hint.style.color = 'var(--text3)';
+  }
+
+  const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  document.getElementById('calMonthYear').textContent = `${calYear}年 ${months[calMonth]}`;
+
+  const grid = document.getElementById('calGrid');
+  const dayNames = ['日','月','火','水','木','金','土'];
+  let html = dayNames.map(d => `<div class="cal-day-name">${d}</div>`).join('');
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  for (let i = 0; i < firstDay; i++) html += `<div class="cal-day empty"></div>`;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(calYear, calMonth, d);
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    let cls = 'cal-day';
+    if (date.getTime() === today.getTime()) cls += ' today';
+
+    const ds = calStartDate ? new Date(calStartDate) : null;
+    const de = calEndDate ? new Date(calEndDate) : (calHover ? new Date(calHover) : null);
+
+    if (ds && dateStr === calStartDate) cls += ' start';
+    if (de && calEndDate && dateStr === calEndDate) cls += ' end';
+    if (ds && de) {
+      if (date > ds && date < de) cls += ' in-range';
+    }
+    html += `<div class="${cls}" onclick="onDayClick('${dateStr}')" onmouseenter="onDayHover('${dateStr}')">${d}</div>`;
+  }
+
+  grid.innerHTML = html;
+}
+
+function onDayClick(dateStr) {
+  const travelType = document.getElementById('fTravelType').value;
+  if (!travelType) { toast('先に出張タイプを選択してください', 'info'); return; }
+
+  if (travelType === 'day_trip' || travelType === 'night_shift') {
+    // 日帰り・夜勤: start/end どちらも選択
+    if (calStep === 0 || !calStartDate) {
+      calStartDate = dateStr;
+      calEndDate = null;
+      calStep = 1;
+    } else {
+      if (dateStr < calStartDate) {
+        calEndDate = calStartDate;
+        calStartDate = dateStr;
+      } else {
+        calEndDate = dateStr;
+      }
+      calStep = 0;
+    }
+  } else {
+    // 宿泊: start → end
+    if (calStep === 0 || !calStartDate) {
+      calStartDate = dateStr;
+      calEndDate = null;
+      calStep = 1;
+    } else {
+      if (dateStr <= calStartDate) {
+        calStartDate = dateStr;
+        calEndDate = null;
+      } else {
+        calEndDate = dateStr;
+        calStep = 0;
+      }
+    }
+  }
+  calHover = null;
+  renderCalendar();
+  if (calStartDate && calEndDate) updateAmounts();
+}
+
+function onDayHover(dateStr) {
+  if (calStep === 1 && calStartDate) {
+    calHover = dateStr;
+    renderCalendar();
+  }
+}
+
+function clearCalendar() {
+  calStartDate = null; calEndDate = null; calHover = null; calStep = 0;
+  renderCalendar();
+  updateDateDisplay();
+}
+
+function applyCalendar() {
+  if (!calStartDate) { toast('日付を選択してください', 'error'); return; }
+  if (!calEndDate) calEndDate = calStartDate;
+  document.getElementById('calendarPopup').classList.remove('open');
+  updateDateDisplay();
+  updateAmounts();
+}
+
+function updateDateDisplay() {
+  const display = document.getElementById('dateRangeDisplay');
+  const text = document.getElementById('dateRangeText');
+  if (calStartDate) {
+    const end = calEndDate || calStartDate;
+    if (calStartDate === end) {
+      text.textContent = calStartDate;
+    } else {
+      const days = Math.floor((new Date(end) - new Date(calStartDate)) / 86400000) + 1;
+      const nights = days - 1;
+      const travelType = document.getElementById('fTravelType').value;
+      const info = travelType === 'overnight' ? `（${nights}泊${days}日）` : `（${days}日間）`;
+      text.textContent = `${calStartDate} 〜 ${end} ${info}`;
+    }
+    display.classList.remove('placeholder');
+    display.classList.add('has-value');
+  } else {
+    text.textContent = '日付を選択（クリックでカレンダー表示）';
+    display.classList.add('placeholder');
+    display.classList.remove('has-value');
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const popup = document.getElementById('calendarPopup');
+  const display = document.getElementById('dateRangeDisplay');
+  if (popup && !popup.contains(e.target) && !display.contains(e.target)) {
+    popup.classList.remove('open');
+  }
+});
+
+// ============================================================
+// AMOUNT CALCULATION
+// ============================================================
+function calculateAmount(travelType, startDate, endDate) {
+  if (!startDate || !endDate) return 0;
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const days = Math.floor((end - start) / 86400000) + 1;
+  const nights = Math.max(days - 1, 1);
+  if (travelType === 'day_trip') return days * 1500;
+  if (travelType === 'overnight') return nights * 3000;
+  if (travelType === 'night_shift') return days * 3000;
+  return 0;
+}
+
+function updateAmounts() {
+  const travelType = document.getElementById('fTravelType').value;
+  const start = calStartDate;
+  const end = calEndDate || calStartDate;
+  const amount = calculateAmount(travelType, start, end);
+  
+  const rows = document.querySelectorAll('#membersBody tr');
+  rows.forEach(row => {
+    const amountInput = row.querySelector('.member-amount');
+    const amountDisplay = row.querySelector('.amount-display');
+    if (amountInput) amountInput.value = amount;
+    if (amountDisplay) amountDisplay.textContent = `¥${amount.toLocaleString()}`;
+  });
+  updateTotal();
+}
+
+function updateTotal() {
+  const inputs = document.querySelectorAll('#membersBody .member-amount');
+  let total = 0;
+  inputs.forEach(inp => {
+    const val = parseInt(inp.value) || 0;
+    total += val;
+  });
+  document.getElementById('totalAmountDisplay').textContent = `¥${total.toLocaleString()}`;
+}
+
+// ============================================================
+// MODAL: NEW / EDIT REQUEST
+// ============================================================
+function openNewRequest() {
+  editingId = null;
+  document.getElementById('requestModalTitle').textContent = '出張手当 新規登録';
+  document.getElementById('fTaskId').value = '';
+  document.getElementById('fTaskName').value = '';
+  document.getElementById('fTravelType').value = '';
+  document.getElementById('fPaymentDate').value = '';
+  document.getElementById('fNotes').value = '';
+  calStartDate = null; calEndDate = null; calHover = null; calStep = 0;
+  updateDateDisplay();
+  document.getElementById('membersBody').innerHTML = '';
+  document.getElementById('totalAmountDisplay').textContent = '¥0';
+  populateSelects();
+  addMemberRow();
+  openModal('requestModal');
+}
+
+async function editRequest(id) {
+  const r = allRequests.find(x => x.id === id);
+  if (!r) return;
+  editingId = id;
+  document.getElementById('requestModalTitle').textContent = '出張手当 編集';
+  await populateSelects();
+  document.getElementById('fTaskId').value = r.task_id || '';
+  document.getElementById('fTaskName').value = r.task_name || '';
+  document.getElementById('fTravelType').value = r.travel_type || '';
+  document.getElementById('fPaymentDate').value = r.payment_date || '';
+  document.getElementById('fNotes').value = r.notes || '';
+  calStartDate = r.start_date;
+  calEndDate = r.end_date;
+  updateDateDisplay();
+
+  const dets = allDetails.filter(d => d.request_id === id);
+  document.getElementById('membersBody').innerHTML = '';
+  dets.forEach(d => addMemberRow(d.employee_name, d.allowance_amount, d.is_refunded, d.id));
+  updateTotal();
+  openModal('requestModal');
+}
+
+function onTaskChange() {
+  const sel = document.getElementById('fTaskId');
+  if (sel.value) {
+    const t = tasks.find(x => x.id === sel.value);
+    if (t) document.getElementById('fTaskName').value = t.task_name;
+  }
+}
+
+function onTravelTypeChange() {
+  updateAmounts();
+}
+
+async function populateSelects() {
+  await loadEmployeesData();
+  await loadTasksData();
+  
+  const taskSel = document.getElementById('fTaskId');
+  taskSel.innerHTML = '<option value="">業務を選択...</option>' +
+    tasks.filter(t => t.is_active).map(t => `<option value="${t.id}">${t.task_name}</option>`).join('');
+}
+
+let memberRowCount = 0;
+function addMemberRow(name = '', amount = 0, isRefunded = false, detId = null) {
+  memberRowCount++;
+  const id = `member-${memberRowCount}`;
+  const empOptions = employees.filter(e => e.is_active)
+    .map(e => `<option value="${e.name}" ${e.name === name ? 'selected' : ''}>${e.name}</option>`).join('');
+  
+  const row = document.createElement('tr');
+  row.id = id;
+  row.dataset.detId = detId || '';
+  row.innerHTML = `
+    <td style="min-width:180px">
+      <select class="member-name" onchange="updateMemberName(this)" style="padding:5px 8px;font-size:12px">
+        <option value="">選択または入力</option>
+        ${empOptions}
+      </select>
+      <input class="member-name-input" type="text" value="${name}" placeholder="氏名を入力" style="margin-top:4px;padding:5px 8px;font-size:12px" oninput="updateTotal()" />
+    </td>
+    <td>
+      <div style="display:flex;align-items:center;gap:6px">
+        <input class="member-amount" type="number" value="${amount}" style="width:90px;padding:5px 8px;font-size:12px" oninput="updateAmountDisplay(this)" />
+        <span class="amount-display" style="font-size:12px">¥${amount.toLocaleString()}</span>
+      </div>
+    </td>
+    <td>
+      ${isRefunded ? '<span class="badge badge-refunded" style="font-size:10px">返還済</span>' : '<span style="color:var(--text3);font-size:11px">—</span>'}
+    </td>
+    <td>
+      ${isRefunded ? '' : `<button class="delete-row-btn" onclick="removeMemberRow('${id}')">✕</button>`}
+    </td>
+  `;
+  document.getElementById('membersBody').appendChild(row);
+  
+  // Set select value
+  const sel = row.querySelector('.member-name');
+  if (name) {
+    const opt = Array.from(sel.options).find(o => o.value === name);
+    if (opt) sel.value = name;
+  }
+}
+
+function updateMemberName(sel) {
+  const row = sel.closest('tr');
+  const input = row.querySelector('.member-name-input');
+  if (sel.value) input.value = sel.value;
+}
+
+function updateAmountDisplay(input) {
+  const row = input.closest('tr');
+  const display = row.querySelector('.amount-display');
+  const val = parseInt(input.value) || 0;
+  display.textContent = `¥${val.toLocaleString()}`;
+  updateTotal();
+}
+
+function removeMemberRow(id) {
+  const row = document.getElementById(id);
+  if (row) { row.remove(); updateTotal(); }
+}
+
+async function saveRequest() {
+  const travelType = document.getElementById('fTravelType').value;
+  const taskName = document.getElementById('fTaskName').value.trim() || document.getElementById('fTaskId').selectedOptions[0]?.text;
+  const taskId = document.getElementById('fTaskId').value || null;
+  const paymentDate = document.getElementById('fPaymentDate').value || null;
+  const notes = document.getElementById('fNotes').value.trim() || null;
+
+  if (!travelType) { toast('出張タイプを選択してください', 'error'); return; }
+  if (!taskName) { toast('業務名を入力してください', 'error'); return; }
+  if (!calStartDate) { toast('出張期間を選択してください', 'error'); return; }
+  const endDate = calEndDate || calStartDate;
+
+  const members = [];
+  document.querySelectorAll('#membersBody tr').forEach(row => {
+    const nameInput = row.querySelector('.member-name-input');
+    const nameSel = row.querySelector('.member-name');
+    const amountInput = row.querySelector('.member-amount');
+    if (!nameInput || !amountInput) return;
+    const name = nameInput.value.trim() || nameSel?.value;
+    const amount = parseInt(amountInput.value) || 0;
+    if (name) {
+      members.push({ name, amount, detId: row.dataset.detId || null });
+    }
+  });
+
+  if (members.length === 0) { toast('メンバーを1名以上追加してください', 'error'); return; }
+
+  const btn = document.getElementById('saveRequestBtn');
+  btn.innerHTML = '<span class="loading-spinner"></span> 保存中...';
+  btn.disabled = true;
+
+  let reqId = editingId;
+  const reqData = {
+    task_id: taskId, task_name: taskName, travel_type: travelType,
+    start_date: calStartDate, end_date: endDate,
+    payment_date: paymentDate, notes, status: 'pending'
+  };
+
+  if (editingId) {
+    const res = await sbPatch(`travel_requests?id=eq.${editingId}`, reqData);
+    if (res.error) { toast('保存に失敗しました', 'error'); btn.innerHTML = '💾 保存する'; btn.disabled = false; return; }
+  } else {
+    const res = await sbPost('travel_requests', reqData);
+    if (res.error || !res.data?.[0]) { toast('保存に失敗しました', 'error'); btn.innerHTML = '💾 保存する'; btn.disabled = false; return; }
+    reqId = res.data[0].id;
+  }
+
+  // Upsert members
+  for (const m of members) {
+    const detData = {
+      request_id: reqId,
+      employee_name: m.name,
+      travel_type: travelType,
+      allowance_amount: m.amount
+    };
+    if (m.detId) {
+      await sbPatch(`travel_allowance_details?id=eq.${m.detId}`, detData);
+    } else {
+      await sbPost('travel_allowance_details', detData);
+    }
+  }
+
+  toast(editingId ? '更新しました ✅' : '登録しました ✅', 'success');
+  closeModal('requestModal');
+  btn.innerHTML = '💾 保存する'; btn.disabled = false;
+  loadDashboard();
+  loadRequests();
+}
+
+// ============================================================
+// EMPLOYEES
+// ============================================================
+async function loadEmployeesData() {
+  const res = await sbGet('employees?select=*&order=name.asc');
+  if (res.data) employees = res.data;
+}
+
+async function loadEmployees() {
+  await loadEmployeesData();
+  const el = document.getElementById('employeeList');
+  if (!el) return;
+  if (employees.length === 0) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px">社員が登録されていません</div>'; return;
+  }
+  el.innerHTML = employees.map(e => `
+    <span class="employee-chip" style="${!e.is_active ? 'opacity:.5' : ''}">
+      👤 ${e.name}${e.department ? ` <span style="color:var(--text3)">${e.department}</span>` : ''}
+      <button class="chip-remove" onclick="toggleEmployee('${e.id}', ${e.is_active})">${e.is_active ? '✕' : '↩'}</button>
+    </span>
+  `).join('');
+}
+
+function openAddEmployee() { openModal('employeeModal'); }
+
+async function saveEmployee() {
+  const name = document.getElementById('eeName').value.trim();
+  const dept = document.getElementById('eeDept').value.trim() || null;
+  if (!name) { toast('氏名を入力してください', 'error'); return; }
+  const res = await sbPost('employees', { name, department: dept });
+  if (res.error) { toast('追加に失敗しました', 'error'); return; }
+  toast(`${name} を追加しました`, 'success');
+  closeModal('employeeModal');
+  document.getElementById('eeName').value = '';
+  document.getElementById('eeDept').value = '';
+  loadEmployees();
+}
+
+async function toggleEmployee(id, isActive) {
+  await sbPatch(`employees?id=eq.${id}`, { is_active: !isActive });
+  loadEmployees();
+}
+
+// ============================================================
+// TASKS
+// ============================================================
+async function loadTasksData() {
+  const res = await sbGet('business_tasks?select=*&order=task_name.asc');
+  if (res.data) tasks = res.data;
+}
+
+async function loadTasks() {
+  await loadTasksData();
+  const el = document.getElementById('taskList');
+  if (!el) return;
+  if (tasks.length === 0) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px">業務が登録されていません</div>'; return;
+  }
+  el.innerHTML = tasks.map(t => `
+    <span class="employee-chip" style="${!t.is_active ? 'opacity:.5' : ''}">
+      🔧 ${t.task_name}${t.description ? ` <span style="color:var(--text3);font-size:11px">${t.description}</span>` : ''}
+      <button class="chip-remove" onclick="toggleTask('${t.id}', ${t.is_active})">${t.is_active ? '✕' : '↩'}</button>
+    </span>
+  `).join('');
+}
+
+function openAddTask() { openModal('taskModal'); }
+
+async function saveTask() {
+  const name = document.getElementById('taskName').value.trim();
+  const desc = document.getElementById('taskDesc').value.trim() || null;
+  if (!name) { toast('業務名を入力してください', 'error'); return; }
+  const res = await sbPost('business_tasks', { task_name: name, description: desc });
+  if (res.error) { toast('追加に失敗しました', 'error'); return; }
+  toast(`「${name}」を追加しました`, 'success');
+  closeModal('taskModal');
+  document.getElementById('taskName').value = '';
+  document.getElementById('taskDesc').value = '';
+  loadTasks();
+}
+
+async function toggleTask(id, isActive) {
+  await sbPatch(`business_tasks?id=eq.${id}`, { is_active: !isActive });
+  loadTasks();
+}
+
+// ============================================================
+// MODAL UTILS
+// ============================================================
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+</script>
+</body>
+</html>
