@@ -1760,7 +1760,7 @@ async function openNewRequest() {
   } catch(e) {
     console.warn('populateSelects error:', e);
   }
-  addMemberRow();
+  // 最初の1行は日付・タイプ選択後に onDateInputChange から自動追加
 }
 
 async function editRequest(id) {
@@ -1979,6 +1979,9 @@ function onDateInputChange() {
   calEndDate    = endEl   ? endEl.value   : null;
   if (!calEndDate) calEndDate = calStartDate;
   if (calStartDate) {
+    // メンバー行がまだ0件なら自動で1行追加
+    const rows = document.querySelectorAll('#membersBody tr');
+    if (rows.length === 0) addMemberRow();
     updateDateDisplay();
     updateAmounts();
   }
