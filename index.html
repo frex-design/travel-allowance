@@ -665,11 +665,11 @@
 <div class="layout">
   <nav class="sidebar">
     <div class="sidebar-label">メニュー</div>
-    <div class="nav-item active" onclick="showPage('dashboard')">
-      <span class="nav-icon">📊</span>ダッシュボード
-    </div>
-    <div class="nav-item" onclick="showPage('requests')">
+    <div class="nav-item active" onclick="showPage('requests')">
       <span class="nav-icon">📋</span>出張手当一覧
+    </div>
+    <div class="nav-item" onclick="showPage('dashboard')">
+      <span class="nav-icon">📊</span>ダッシュボード
     </div>
     <div class="nav-item" onclick="showPage('employees')">
       <span class="nav-icon">👥</span>社員マスタ
@@ -706,7 +706,7 @@
   <main class="main">
 
     <!-- ===== DASHBOARD ===== -->
-    <div id="page-dashboard" class="page active">
+    <div id="page-dashboard" class="page">
       <div class="page-header">
         <div>
           <div class="page-title">ダッシュボード</div>
@@ -784,7 +784,7 @@
     </div>
 
     <!-- ===== REQUESTS ===== -->
-    <div id="page-requests" class="page">
+    <div id="page-requests" class="page active">
       <div class="page-header">
         <div>
           <div class="page-title">出張手当一覧</div>
@@ -1107,6 +1107,7 @@ window.addEventListener('DOMContentLoaded', function() {
   if (SUPABASE_URL && SUPABASE_KEY) {
     document.getElementById('configOverlay').style.display = 'none';
     loadAll();
+    loadRequests();
   } else {
     document.getElementById('cfgUrl').value = SUPABASE_URL;
     document.getElementById('cfgKey').value = SUPABASE_KEY;
