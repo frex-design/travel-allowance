@@ -1504,6 +1504,37 @@ function toggleCalendar() {
     calYear = now.getFullYear();
     calMonth = now.getMonth();
     calStep = calStartDate ? calStep : 0;
+
+    // グリッドのイベントをここで一度だけ登録
+    const grid = document.getElementById('calGrid');
+    if (!grid._calReady) {
+      grid.addEventListener('click', function(ev) {
+        const cell = ev.target.closest('[data-date]');
+        if (!cell) return;
+        const ds = cell.dataset.date;
+        const tt = document.getElementById('fTravelType').value;
+        if (!tt) { toast('先に出張タイプを選択してください', 'info'); return; }
+        if (calStep === 0) {
+          calStartDate = ds; calEndDate = null; calHover = null; calStep = 1;
+        } else {
+          if (ds < calStartDate) { calEndDate = calStartDate; calStartDate = ds; }
+          else                   { calEndDate = ds; }
+          calHover = null; calStep = 0;
+        }
+        renderCalendar();
+        if (calStartDate && calEndDate) { updateDateDisplay(); updateAmounts(); }
+      });
+      grid.addEventListener('mouseover', function(ev) {
+        const cell = ev.target.closest('[data-date]');
+        if (!cell) return;
+        if (calStep === 1 && calStartDate) {
+          calHover = cell.dataset.date;
+          renderCalendar();
+        }
+      });
+      grid._calReady = true;
+    }
+
     renderCalendar();
     popup.classList.add('open');
     positionCalendar();
@@ -1540,35 +1571,6 @@ function renderCalendar() {
 
   const grid = document.getElementById('calGrid');
 
-  // イベント委譲: grid 自体に click と mouseover を一度だけ登録
-  if (!grid._calEventsAttached) {
-    grid.addEventListener('click', function(e) {
-      const cell = e.target.closest('.cal-day');
-      if (!cell || cell.classList.contains('empty')) return;
-      const ds = cell.dataset.date;
-      if (!ds) return;
-      const travelType = document.getElementById('fTravelType').value;
-      if (!travelType) { toast('先に出張タイプを選択してください', 'info'); return; }
-      if (calStep === 0) {
-        calStartDate = ds; calEndDate = null; calHover = null; calStep = 1;
-      } else {
-        if (ds < calStartDate) { calEndDate = calStartDate; calStartDate = ds; }
-        else                   { calEndDate = ds; }
-        calHover = null; calStep = 0;
-      }
-      renderCalendar();
-      if (calStartDate && calEndDate) { updateDateDisplay(); updateAmounts(); }
-    });
-    grid.addEventListener('mouseover', function(e) {
-      const cell = e.target.closest('.cal-day');
-      if (!cell || cell.classList.contains('empty')) return;
-      const ds = cell.dataset.date;
-      if (!ds) return;
-      if (calStep === 1 && calStartDate) { calHover = ds; renderCalendar(); }
-    });
-    grid._calEventsAttached = true;
-  }
-
   const dayNames = ['日','月','火','水','木','金','土'];
   let html = dayNames.map(d => `<div class="cal-day-name">${d}</div>`).join('');
 
@@ -1599,7 +1601,6 @@ function renderCalendar() {
     html += `<div class="${cls}" data-date="${ds}">${d}</div>`;
   }
   grid.innerHTML = html;
-  grid._calEventsAttached = false; // innerHTML差し替え後は再登録が必要
 }
 
 function clearCalendar() {
