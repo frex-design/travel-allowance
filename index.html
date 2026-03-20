@@ -957,38 +957,44 @@
   </div>
 </div>
 
-<!-- ===== MODAL: 社員追加 ===== -->
+<!-- ===== MODAL: 社員追加・編集 ===== -->
 <div class="modal-overlay" id="employeeModal">
   <div class="modal" style="max-width:400px">
     <div class="modal-header">
-      <div class="modal-title">社員追加</div>
+      <div class="modal-title" id="employeeModalTitle">社員追加</div>
       <button class="modal-close" onclick="closeModal('employeeModal')">✕</button>
     </div>
     <div class="modal-body">
+      <input type="hidden" id="eeId" />
       <div class="form-group">
         <label>氏名 *</label>
         <input id="eeName" placeholder="例：山田 太郎" />
       </div>
       <div class="form-group" style="margin-top:12px">
-        <label>部署</label>
-        <input id="eeDept" placeholder="例：点検部" />
+        <label>事業所 / 部署</label>
+        <select id="eeDept">
+          <option value="">選択してください</option>
+          <option value="秋田事業所">秋田事業所</option>
+          <option value="横手事業所">横手事業所</option>
+        </select>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('employeeModal')">キャンセル</button>
-      <button class="btn btn-primary" onclick="saveEmployee()">追加する</button>
+      <button class="btn btn-primary" id="eeSubmitBtn" onclick="saveEmployee()">追加する</button>
     </div>
   </div>
 </div>
 
-<!-- ===== MODAL: 業務追加 ===== -->
+<!-- ===== MODAL: 業務追加・編集 ===== -->
 <div class="modal-overlay" id="taskModal">
   <div class="modal" style="max-width:400px">
     <div class="modal-header">
-      <div class="modal-title">業務追加</div>
+      <div class="modal-title" id="taskModalTitle">業務追加</div>
       <button class="modal-close" onclick="closeModal('taskModal')">✕</button>
     </div>
     <div class="modal-body">
+      <input type="hidden" id="taskId" />
       <div class="form-group">
         <label>業務名 *</label>
         <input id="taskName" placeholder="例：橋梁定期点検" />
@@ -1000,7 +1006,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('taskModal')">キャンセル</button>
-      <button class="btn btn-primary" onclick="saveTask()">追加する</button>
+      <button class="btn btn-primary" id="taskSubmitBtn" onclick="saveTask()">追加する</button>
     </div>
   </div>
 </div>
@@ -1832,28 +1838,83 @@ async function loadEmployees() {
   const el = document.getElementById('employeeList');
   if (!el) return;
   if (employees.length === 0) {
-    el.innerHTML = '<div style="color:var(--text3);font-size:13px">社員が登録されていません</div>'; return;
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px 0">社員が登録されていません</div>'; return;
   }
-  el.innerHTML = employees.map(e => `
-    <span class="employee-chip" style="${!e.is_active ? 'opacity:.5' : ''}">
-      👤 ${e.name}${e.department ? ` <span style="color:var(--text3)">${e.department}</span>` : ''}
-      <button class="chip-remove" onclick="toggleEmployee('${e.id}', ${e.is_active})">${e.is_active ? '✕' : '↩'}</button>
-    </span>
-  `).join('');
+  el.innerHTML = `
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="background:var(--surface2)">
+          <th style="padding:9px 14px;font-size:11px;font-weight:600;color:var(--text3);text-align:left;letter-spacing:.5px">氏名</th>
+          <th style="padding:9px 14px;font-size:11px;font-weight:600;color:var(--text3);text-align:left;letter-spacing:.5px">事業所 / 部署</th>
+          <th style="padding:9px 14px;font-size:11px;font-weight:600;color:var(--text3);text-align:left;letter-spacing:.5px">状態</th>
+          <th style="padding:9px 14px;font-size:11px;font-weight:600;color:var(--text3);text-align:right;letter-spacing:.5px">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${employees.map(e => `
+          <tr style="border-top:1px solid var(--border);${!e.is_active ? 'opacity:.5' : ''}">
+            <td style="padding:10px 14px;font-weight:500">👤 ${e.name}</td>
+            <td style="padding:10px 14px;color:var(--text2);font-size:13px">${e.department || '—'}</td>
+            <td style="padding:10px 14px">
+              <span class="badge ${e.is_active ? 'badge-paid' : 'badge-cancelled'}">${e.is_active ? '有効' : '無効'}</span>
+            </td>
+            <td style="padding:10px 14px;text-align:right">
+              <div style="display:flex;gap:6px;justify-content:flex-end">
+                <button class="btn btn-ghost btn-sm" onclick="openEditEmployee('${e.id}')">✏️ 編集</button>
+                <button class="btn btn-ghost btn-sm" onclick="toggleEmployee('${e.id}', ${e.is_active})">${e.is_active ? '無効化' : '有効化'}</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteEmployee('${e.id}', '${e.name}')">🗑 削除</button>
+              </div>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
 }
 
-function openAddEmployee() { openModal('employeeModal'); }
-
-async function saveEmployee() {
-  const name = document.getElementById('eeName').value.trim();
-  const dept = document.getElementById('eeDept').value.trim() || null;
-  if (!name) { toast('氏名を入力してください', 'error'); return; }
-  const res = await sbPost('employees', { name, department: dept });
-  if (res.error) return;
-  toast(`${name} を追加しました ✅`, 'success');
-  closeModal('employeeModal');
+function openAddEmployee() {
+  document.getElementById('eeId').value = '';
   document.getElementById('eeName').value = '';
   document.getElementById('eeDept').value = '';
+  document.getElementById('employeeModalTitle').textContent = '社員追加';
+  document.getElementById('eeSubmitBtn').textContent = '追加する';
+  openModal('employeeModal');
+}
+
+function openEditEmployee(id) {
+  const e = employees.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('eeId').value = e.id;
+  document.getElementById('eeName').value = e.name;
+  document.getElementById('eeDept').value = e.department || '';
+  document.getElementById('employeeModalTitle').textContent = '社員編集';
+  document.getElementById('eeSubmitBtn').textContent = '保存する';
+  openModal('employeeModal');
+}
+
+async function deleteEmployee(id, name) {
+  if (!confirm(`「${name}」を削除しますか？\n※ 出張手当の履歴には影響しません`)) return;
+  const res = await sbDelete(`employees?id=eq.${id}`);
+  if (res.error) return;
+  toast(`${name} を削除しました`, 'info');
+  loadEmployees();
+}
+
+async function saveEmployee() {
+  const id = document.getElementById('eeId').value;
+  const name = document.getElementById('eeName').value.trim();
+  const dept = document.getElementById('eeDept').value || null;
+  if (!name) { toast('氏名を入力してください', 'error'); return; }
+  if (id) {
+    const res = await sbPatch(`employees?id=eq.${id}`, { name, department: dept });
+    if (res.error) return;
+    toast(`${name} を更新しました ✅`, 'success');
+  } else {
+    const res = await sbPost('employees', { name, department: dept });
+    if (res.error) return;
+    toast(`${name} を追加しました ✅`, 'success');
+  }
+  closeModal('employeeModal');
   loadEmployees();
 }
 
@@ -1875,28 +1936,83 @@ async function loadTasks() {
   const el = document.getElementById('taskList');
   if (!el) return;
   if (tasks.length === 0) {
-    el.innerHTML = '<div style="color:var(--text3);font-size:13px">業務が登録されていません</div>'; return;
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:16px 0">業務が登録されていません</div>'; return;
   }
-  el.innerHTML = tasks.map(t => `
-    <span class="employee-chip" style="${!t.is_active ? 'opacity:.5' : ''}">
-      🔧 ${t.task_name}${t.description ? ` <span style="color:var(--text3);font-size:11px">${t.description}</span>` : ''}
-      <button class="chip-remove" onclick="toggleTask('${t.id}', ${t.is_active})">${t.is_active ? '✕' : '↩'}</button>
-    </span>
-  `).join('');
+  el.innerHTML = `
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="background:var(--surface2)">
+          <th style="padding:9px 14px;font-size:11px;font-weight:600;color:var(--text3);text-align:left;letter-spacing:.5px">業務名</th>
+          <th style="padding:9px 14px;font-size:11px;font-weight:600;color:var(--text3);text-align:left;letter-spacing:.5px">説明</th>
+          <th style="padding:9px 14px;font-size:11px;font-weight:600;color:var(--text3);text-align:left;letter-spacing:.5px">状態</th>
+          <th style="padding:9px 14px;font-size:11px;font-weight:600;color:var(--text3);text-align:right;letter-spacing:.5px">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tasks.map(t => `
+          <tr style="border-top:1px solid var(--border);${!t.is_active ? 'opacity:.5' : ''}">
+            <td style="padding:10px 14px;font-weight:500">🔧 ${t.task_name}</td>
+            <td style="padding:10px 14px;color:var(--text2);font-size:13px">${t.description || '—'}</td>
+            <td style="padding:10px 14px">
+              <span class="badge ${t.is_active ? 'badge-paid' : 'badge-cancelled'}">${t.is_active ? '有効' : '無効'}</span>
+            </td>
+            <td style="padding:10px 14px;text-align:right">
+              <div style="display:flex;gap:6px;justify-content:flex-end">
+                <button class="btn btn-ghost btn-sm" onclick="openEditTask('${t.id}')">✏️ 編集</button>
+                <button class="btn btn-ghost btn-sm" onclick="toggleTask('${t.id}', ${t.is_active})">${t.is_active ? '無効化' : '有効化'}</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteTask('${t.id}', '${t.task_name}')">🗑 削除</button>
+              </div>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
 }
 
-function openAddTask() { openModal('taskModal'); }
+function openAddTask() {
+  document.getElementById('taskId').value = '';
+  document.getElementById('taskName').value = '';
+  document.getElementById('taskDesc').value = '';
+  document.getElementById('taskModalTitle').textContent = '業務追加';
+  document.getElementById('taskSubmitBtn').textContent = '追加する';
+  openModal('taskModal');
+}
+
+function openEditTask(id) {
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('taskId').value = t.id;
+  document.getElementById('taskName').value = t.task_name;
+  document.getElementById('taskDesc').value = t.description || '';
+  document.getElementById('taskModalTitle').textContent = '業務編集';
+  document.getElementById('taskSubmitBtn').textContent = '保存する';
+  openModal('taskModal');
+}
+
+async function deleteTask(id, name) {
+  if (!confirm(`「${name}」を削除しますか？\n※ 出張手当の履歴には影響しません`)) return;
+  const res = await sbDelete(`business_tasks?id=eq.${id}`);
+  if (res.error) return;
+  toast(`「${name}」を削除しました`, 'info');
+  loadTasks();
+}
 
 async function saveTask() {
+  const id = document.getElementById('taskId').value;
   const name = document.getElementById('taskName').value.trim();
   const desc = document.getElementById('taskDesc').value.trim() || null;
   if (!name) { toast('業務名を入力してください', 'error'); return; }
-  const res = await sbPost('business_tasks', { task_name: name, description: desc });
-  if (res.error) return;
-  toast(`「${name}」を追加しました ✅`, 'success');
+  if (id) {
+    const res = await sbPatch(`business_tasks?id=eq.${id}`, { task_name: name, description: desc });
+    if (res.error) return;
+    toast(`「${name}」を更新しました ✅`, 'success');
+  } else {
+    const res = await sbPost('business_tasks', { task_name: name, description: desc });
+    if (res.error) return;
+    toast(`「${name}」を追加しました ✅`, 'success');
+  }
   closeModal('taskModal');
-  document.getElementById('taskName').value = '';
-  document.getElementById('taskDesc').value = '';
   loadTasks();
 }
 
