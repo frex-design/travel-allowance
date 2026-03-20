@@ -1182,7 +1182,7 @@ function toast(msg, type) { if (type === undefined) type = 'info';
   const icons = { success: '✅', error: '❌', info: 'ℹ️' };
   el.innerHTML = `<span>${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
   c.appendChild(el);
-  setTimeout(function() { return el.remove(), 3500; });
+  setTimeout(function() { el.remove(); }, 3500);
 }
 
 // ============================================================
@@ -1560,8 +1560,8 @@ function renderRequestsTable(tableId, reqs, simple) {
   }
   tbody.innerHTML = reqs.map(function(r) {
     const dets = allDetails.filter(function(d) { return d.request_id === r.id; });
-    const total = dets.filter(function(d) { return !d.is_refunded).reduce(function(s, d) { return s + d.allowance_amount; }, 0);
-    const refunded = dets.filter(function(d) { return d.is_refunded).reduce(function(s, d) { return s + d.allowance_amount; }, 0);
+    const total = dets.filter(function(d) { return !d.is_refunded; }).reduce(function(s, d) { return s + d.allowance_amount; }, 0);
+    const refunded = dets.filter(function(d) { return d.is_refunded; }).reduce(function(s, d) { return s + d.allowance_amount; }, 0);
     const typeLabel = { day_trip:'🚗 日帰り', overnight:'🏨 宿泊', night_shift:'🌙 夜勤' }[r.travel_type] || r.travel_type;
     const typeBadge = { day_trip:'badge-day', overnight:'badge-overnight', night_shift:'badge-night' }[r.travel_type] || '';
     const period = r.start_date === r.end_date ? r.start_date : `${r.start_date} 〜 ${r.end_date}`;
@@ -1611,7 +1611,7 @@ async function showDetail(id) {
   if (!r) return;
   const dets = allDetails.filter(function(d) { return d.request_id === id; });
   const total = dets.reduce(function(s, d) { return s + d.allowance_amount; }, 0);
-  const refunded = dets.filter(function(d) { return d.is_refunded).reduce(function(s, d) { return s + d.allowance_amount; }, 0);
+  const refunded = dets.filter(function(d) { return d.is_refunded; }).reduce(function(s, d) { return s + d.allowance_amount; }, 0);
   const typeLabel = { day_trip:'🚗 日帰り', overnight:'🏨 宿泊', night_shift:'🌙 夜勤' }[r.travel_type] || r.travel_type;
   const statusMap = { pending: ['badge-pending','未支給'], paid: ['badge-paid','支給済'], cancelled: ['badge-cancelled','キャンセル'], refunded: ['badge-refunded','返還済'] };
   const [sc, sl] = statusMap[r.status] || ['',''];
@@ -2057,14 +2057,14 @@ async function populateSelects() {
   
   const taskSel = document.getElementById('fTaskId');
   taskSel.innerHTML = '<option value="">業務を選択...</option>' +
-    tasks.filter(function(t) { return t.is_active).map(function(t) { return `<option value="${t.id}">${t.task_name}</option>`).join('');
+    tasks.filter(function(t) { return t.is_active; }).map(function(t) { return `<option value="${t.id}">${t.task_name}</option>`; }).join('');
 }
 
 let memberRowCount = 0;
 function getFilteredEmpOptions(selectedName) {
   const office = (document.getElementById('fOffice') && document.getElementById('fOffice').value) || '';
   const filtered = employees.filter(function(e) { return e.is_active && (!office || e.department === office); });
-  return filtered.map(function(e) { return `<option value="${e.name}" ${e.name === selectedName ? 'selected' : ''}>${e.name}</option>`).join('');
+  return filtered.map(function(e) { return `<option value="${e.name}" ${e.name === selectedName ? 'selected' : ''}>${e.name}</option>`; }).join('');
 }
 
 function addMemberRow(name, amount, isRefunded, detId, office) {
@@ -2257,7 +2257,7 @@ async function loadEmployees() {
               </div>
             </td>
           </tr>
-        `).join('')}
+        `; }).join('')}
       </tbody>
     </table>
   `;
@@ -2378,7 +2378,7 @@ async function loadTasks() {
               </div>
             </td>
           </tr>
-        `).join('')}
+        `; }).join('')}
       </tbody>
     </table>
   `;
