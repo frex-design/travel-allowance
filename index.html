@@ -920,25 +920,7 @@
         </div>
         <div class="form-group">
           <label>支給日</label>
-          <div style="position:relative">
-            <div class="date-range-display" id="payDateDisplay" onclick="togglePayCal()" style="cursor:pointer">
-              <span>📅</span>
-              <span id="payDateText" style="color:var(--text3)">未設定</span>
-            </div>
-            <div class="calendar-popup" id="payCalPopup" style="min-width:290px">
-              <div class="cal-header">
-                <button class="cal-nav" onclick="payCalPrev()">◀</button>
-                <span class="cal-month-year" id="payCalMonthYear"></span>
-                <button class="cal-nav" onclick="payCalNext()">▶</button>
-              </div>
-              <div class="cal-grid" id="payCalGrid"></div>
-              <div class="cal-actions">
-                <button class="btn btn-ghost btn-sm" onclick="clearPayCal()">クリア</button>
-                <button class="btn btn-primary btn-sm" onclick="closePayCal()">確定</button>
-              </div>
-            </div>
-          </div>
-          <input type="hidden" id="fPaymentDate" />
+          <input type="date" id="fPaymentDate" />
         </div>
         <div class="form-group">
           <label>出張開始日 *</label>
@@ -1568,156 +1550,6 @@ async function updateStatus(id, status) {
 // ============================================================
 // CALENDAR — 最終確定版
 // ============================================================
-function toggleCalendar() {
-  const popup = document.getElementById('calendarPopup');
-  if (popup.style.display === 'block') {
-    popup.style.display = 'none';
-    return;
-  }
-  const now = new Date();
-  calYear  = now.getFullYear();
-  calMonth = now.getMonth();
-  if (!calStartDate) calStep = 0;
-  drawCal();
-  popup.style.display = 'block';
-}
-
-function prevMonth() { calMonth--; if (calMonth < 0)  { calMonth=11; calYear--; } drawCal(); }
-function nextMonth() { calMonth++; if (calMonth > 11) { calMonth=0;  calYear++; } drawCal(); }
-
-  // drawCal: DOM操作で確実にイベント登録
-function drawCal() {
-  const travelType = document.getElementById('fTravelType').value;
-  const hint = document.getElementById('calTypeHint');
-  if (!travelType) {
-    hint.textContent = 'まず出張タイプを選択してください';
-    hint.style.color = 'var(--amber)';
-  } else if (calStep === 1) {
-    hint.textContent = '開始日選択済 → 終了日をクリック';
-    hint.style.color = 'var(--accent)';
-  } else {
-    hint.textContent = '① 開始日 → ② 終了日 の順にクリック';
-    hint.style.color = 'var(--text3)';
-  }
-
-  const mNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-  document.getElementById('calMonthYear').textContent = calYear + '年 ' + mNames[calMonth];
-
-  const td = new Date();
-  const todayStr = td.getFullYear() + '-' + String(td.getMonth()+1).padStart(2,'0') + '-' + String(td.getDate()).padStart(2,'0');
-
-  const rangeEnd = calEndDate || calHover || null;
-  let lo = null, hi = null;
-  if (calStartDate && rangeEnd) {
-    lo = calStartDate < rangeEnd ? calStartDate : rangeEnd;
-    hi = calStartDate < rangeEnd ? rangeEnd : calStartDate;
-  } else if (calStartDate) {
-    lo = hi = calStartDate;
-  }
-
-  const firstDay    = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  const dayNames    = ['日','月','火','水','木','金','土'];
-
-  const grid = document.getElementById('calGrid');
-  grid.innerHTML = '';
-
-  dayNames.forEach(function(n) {
-    var h = document.createElement('div');
-    h.className = 'cal-day-name';
-    h.textContent = n;
-    grid.appendChild(h);
-  });
-
-  for (var i = 0; i < firstDay; i++) {
-    var e = document.createElement('div');
-    e.className = 'cal-day empty';
-    grid.appendChild(e);
-  }
-
-  for (var d = 1; d <= daysInMonth; d++) {
-    var ds = calYear + '-' + String(calMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
-    var cls = 'cal-day';
-    if (ds === todayStr) cls += ' today';
-    if (lo && hi) {
-      if      (ds === lo && ds === hi) cls += ' start end';
-      else if (ds === lo)              cls += ' start';
-      else if (ds === hi)              cls += ' end';
-      else if (ds > lo && ds < hi)    cls += ' in-range';
-    }
-    var cell = document.createElement('div');
-    cell.className = cls;
-    cell.textContent = String(d);
-    cell.style.cursor = 'pointer';
-    (function(dateStr) {
-      cell.onclick = function() { calDayClick(dateStr); };
-      cell.onmouseenter = function() { calDayHover(dateStr); };
-    })(ds);
-    grid.appendChild(cell);
-  }
-}
-
-function calDayClick(ds) {
-  const tt = document.getElementById('fTravelType').value;
-  if (!tt) { toast('先に出張タイプを選択してください', 'info'); return; }
-
-  if (calStep === 0) {
-    calStartDate = ds;
-    calEndDate   = null;
-    calHover     = null;
-    calStep      = 1;
-  } else {
-    if (ds < calStartDate) {
-      calEndDate   = calStartDate;
-      calStartDate = ds;
-    } else {
-      calEndDate = ds;
-    }
-    calHover = null;
-    calStep  = 0;
-  }
-  drawCal();
-  if (calStartDate && calEndDate) {
-    updateDateDisplay();
-    updateAmounts();
-  }
-}
-
-function calDayHover(ds) {
-  if (calStep === 1 && calStartDate) {
-    calHover = ds;
-    drawCal();
-  }
-}
-
-function clearCalendar() {
-  calStartDate = null; calEndDate = null; calHover = null; calStep = 0;
-  drawCal();
-  updateDateDisplay();
-}
-
-function applyCalendar() {
-  if (!calStartDate) { toast('日付を選択してください', 'error'); return; }
-  if (!calEndDate) calEndDate = calStartDate;
-  calHover = null; calStep = 0;
-  document.getElementById('calendarPopup').style.display = 'none';
-  updateDateDisplay();
-  updateAmounts();
-}
-
-function renderCalendar() { drawCal(); }
-
-
-function fmtDate(ds) {
-  if (!ds) return '';
-  const [y, m, d] = ds.split('-');
-  return `${y}年${parseInt(m)}月${parseInt(d)}日`;
-}
-
-function updateDateDisplay() {
-  // date input 方式では特に何もしない（inputに直接表示されるため）
-}
-
 // カレンダーは同一モーダル内インラインなので外クリック閉じ不要
 // (モーダル外クリックはモーダル全体が閉じるため)
 
@@ -1765,11 +1597,14 @@ function updateAmounts() {
   const amount = calculateAmount(travelType, start, end);
 
   // 内訳表示
-  const bdEl = document.getElementById('amountBreakdown');
-  if (bdEl) {
-    const bd = calcBreakdown(travelType, start, end);
-    if (bd) { bdEl.textContent = '1人あたり ' + bd; bdEl.style.display = 'block'; }
-    else    { bdEl.style.display = 'none'; }
+  const bdEl  = document.getElementById('amountBreakdown');
+  const bdRow = document.getElementById('amountBreakdownRow');
+  const bd = calcBreakdown(travelType, start, end);
+  if (bdEl && bd) {
+    bdEl.textContent = '1人あたり ' + bd;
+    if (bdRow) bdRow.style.display = 'block';
+  } else {
+    if (bdRow) bdRow.style.display = 'none';
   }
 
   const rows = document.querySelectorAll('#membersBody tr');
@@ -1803,9 +1638,6 @@ function openNewRequest() {
   document.getElementById('fTaskName').value = '';
   document.getElementById('fTravelType').value = '';
   document.getElementById('fPaymentDate').value = '';
-  payCalSelected = '';
-  const payTxt = document.getElementById('payDateText');
-  if (payTxt) { payTxt.textContent = '未設定'; payTxt.style.color = 'var(--text3)'; }
   document.getElementById('fNotes').value = '';
   calStartDate = null; calEndDate = null; calHover = null; calStep = 0;
   const si = document.getElementById('calStartInput');
@@ -1831,16 +1663,6 @@ async function editRequest(id) {
   document.getElementById('fTaskName').value = r.task_name || '';
   document.getElementById('fTravelType').value = r.travel_type || '';
   document.getElementById('fPaymentDate').value = r.payment_date || '';
-  if (r.payment_date) {
-    payCalSelected = r.payment_date;
-    const [y, m, d] = r.payment_date.split('-');
-    const txt = document.getElementById('payDateText');
-    if (txt) { txt.textContent = `${y}年${parseInt(m)}月${parseInt(d)}日`; txt.style.color = 'var(--text)'; }
-  } else {
-    payCalSelected = '';
-    const txt = document.getElementById('payDateText');
-    if (txt) { txt.textContent = '未設定'; txt.style.color = 'var(--text3)'; }
-  }
   document.getElementById('fNotes').value = r.notes || '';
   calStartDate = r.start_date;
   calEndDate   = r.end_date;
@@ -1984,7 +1806,12 @@ async function saveRequest() {
 
   if (!travelType) { toast('出張タイプを選択してください', 'error'); return; }
   if (!taskName) { toast('業務名を入力してください', 'error'); return; }
-  if (!calStartDate) { toast('出張期間を選択してください', 'error'); return; }
+  // date input から最新値を取得
+  const startInputEl = document.getElementById('calStartInput');
+  const endInputEl   = document.getElementById('calEndInput');
+  if (startInputEl && startInputEl.value) calStartDate = startInputEl.value;
+  if (endInputEl   && endInputEl.value)   calEndDate   = endInputEl.value;
+  if (!calStartDate) { toast('出張開始日を選択してください', 'error'); return; }
   const endDate = calEndDate || calStartDate;
 
   const members = [];
@@ -2272,81 +2099,6 @@ async function toggleTask(id, isActive) {
 }
 
 
-// ============================================================
-// 支給日カレンダー
-// ============================================================
-let payCalYear, payCalMonth, payCalSelected = '';
-
-function togglePayCal() {
-  const popup = document.getElementById('payCalPopup');
-  if (popup.classList.contains('open')) {
-    popup.classList.remove('open');
-  } else {
-    const now = new Date();
-    payCalYear = now.getFullYear();
-    payCalMonth = now.getMonth();
-    renderPayCal();
-    popup.classList.add('open');
-  }
-}
-
-function payCalPrev() { payCalMonth--; if (payCalMonth < 0) { payCalMonth = 11; payCalYear--; } renderPayCal(); }
-function payCalNext() { payCalMonth++; if (payCalMonth > 11) { payCalMonth = 0; payCalYear++; } renderPayCal(); }
-
-function renderPayCal() {
-  const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-  document.getElementById('payCalMonthYear').textContent = `${payCalYear}年 ${months[payCalMonth]}`;
-  const grid = document.getElementById('payCalGrid');
-  const dayNames = ['日','月','火','水','木','金','土'];
-  let html = dayNames.map(d => `<div class="cal-day-name">${d}</div>`).join('');
-  const firstDay = new Date(payCalYear, payCalMonth, 1).getDay();
-  const daysInMonth = new Date(payCalYear, payCalMonth + 1, 0).getDate();
-  const today = new Date(); today.setHours(0,0,0,0);
-  for (let i = 0; i < firstDay; i++) html += `<div class="cal-day empty"></div>`;
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${payCalYear}-${String(payCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isToday = new Date(payCalYear, payCalMonth, d).getTime() === today.getTime();
-    const isSelected = dateStr === payCalSelected;
-    let cls = 'cal-day';
-    if (isToday) cls += ' today';
-    if (isSelected) cls += ' start end';
-    html += `<div class="${cls}" onclick="selectPayDate('${dateStr}')">${d}</div>`;
-  }
-  grid.innerHTML = html;
-}
-
-function selectPayDate(dateStr) {
-  payCalSelected = dateStr;
-  document.getElementById('fPaymentDate').value = dateStr;
-  const [y, m, d] = dateStr.split('-');
-  document.getElementById('payDateText').textContent = `${y}年${parseInt(m)}月${parseInt(d)}日`;
-  document.getElementById('payDateText').style.color = 'var(--text)';
-  renderPayCal();
-}
-
-function clearPayCal() {
-  payCalSelected = '';
-  document.getElementById('fPaymentDate').value = '';
-  payCalSelected = '';
-  const payTxt = document.getElementById('payDateText');
-  if (payTxt) { payTxt.textContent = '未設定'; payTxt.style.color = 'var(--text3)'; }
-  document.getElementById('payDateText').textContent = '未設定';
-  document.getElementById('payDateText').style.color = 'var(--text3)';
-  renderPayCal();
-}
-
-function closePayCal() {
-  document.getElementById('payCalPopup').classList.remove('open');
-}
-
-// 支給日カレンダーを外クリックで閉じる
-document.addEventListener('click', (e) => {
-  const popup = document.getElementById('payCalPopup');
-  const display = document.getElementById('payDateDisplay');
-  if (popup && display && !popup.contains(e.target) && !display.contains(e.target)) {
-    popup.classList.remove('open');
-  }
-});
 
 // ============================================================
 // MODAL UTILS
