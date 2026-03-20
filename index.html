@@ -880,7 +880,25 @@
         </div>
         <div class="form-group">
           <label>支給日</label>
-          <input type="date" id="fPaymentDate" />
+          <div style="position:relative">
+            <div class="date-range-display" id="payDateDisplay" onclick="togglePayCal()" style="cursor:pointer">
+              <span>📅</span>
+              <span id="payDateText" style="color:var(--text3)">未設定</span>
+            </div>
+            <div class="calendar-popup" id="payCalPopup" style="min-width:290px">
+              <div class="cal-header">
+                <button class="cal-nav" onclick="payCalPrev()">◀</button>
+                <span class="cal-month-year" id="payCalMonthYear"></span>
+                <button class="cal-nav" onclick="payCalNext()">▶</button>
+              </div>
+              <div class="cal-grid" id="payCalGrid"></div>
+              <div class="cal-actions">
+                <button class="btn btn-ghost btn-sm" onclick="clearPayCal()">クリア</button>
+                <button class="btn btn-primary btn-sm" onclick="closePayCal()">確定</button>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="fPaymentDate" />
         </div>
         <div class="form-group full">
           <label>出張期間 *</label>
@@ -918,7 +936,7 @@
         <table class="members-table" id="membersTable">
           <thead>
             <tr>
-              <th>氏名 *</th>
+              <th>氏名</th>
               <th>事業所</th>
               <th>支給金額</th>
               <th>返還</th>
@@ -1429,9 +1447,9 @@ function renderCalendar() {
     hint.textContent = 'まず出張タイプを選択してください';
     hint.style.color = 'var(--amber)';
   } else {
-    const msgs = { day_trip: '日帰り：出張日を選択（期間選択可）', overnight: '宿泊：出発日から帰着日まで選択', night_shift: '夜勤：夜勤日を選択（複数日可）' };
-    hint.textContent = msgs[travelType] || '';
-    hint.style.color = 'var(--text3)';
+    const msgs = { day_trip: '①開始日 ②終了日 の順にクリック（1日のみの場合は同じ日を2回）', overnight: '①出発日 ②帰着日 の順にクリック', night_shift: '①開始日 ②終了日 の順にクリック' };
+    hint.textContent = (calStep === 1 && calStartDate) ? '✅ 開始日選択済 → 終了日をクリック' : msgs[travelType] || '';
+    hint.style.color = (calStep === 1 && calStartDate) ? 'var(--accent)' : 'var(--text3)';
   }
 
   const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
@@ -1446,22 +1464,33 @@ function renderCalendar() {
   const today = new Date();
   today.setHours(0,0,0,0);
 
+  // 範囲ハイライト用: 確定済みendまたはホバー中のendを使う
+  const dsTime = calStartDate ? new Date(calStartDate).getTime() : null;
+  const deTime = calEndDate ? new Date(calEndDate).getTime()
+                 : (calHover ? new Date(calHover).getTime() : null);
+
   for (let i = 0; i < firstDay; i++) html += `<div class="cal-day empty"></div>`;
 
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(calYear, calMonth, d);
+    date.setHours(0,0,0,0);
+    const t = date.getTime();
     const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     let cls = 'cal-day';
-    if (date.getTime() === today.getTime()) cls += ' today';
 
-    const ds = calStartDate ? new Date(calStartDate) : null;
-    const de = calEndDate ? new Date(calEndDate) : (calHover ? new Date(calHover) : null);
+    if (t === today.getTime()) cls += ' today';
 
-    if (ds && dateStr === calStartDate) cls += ' start';
-    if (de && calEndDate && dateStr === calEndDate) cls += ' end';
-    if (ds && de) {
-      if (date > ds && date < de) cls += ' in-range';
+    if (dsTime && deTime) {
+      const lo = Math.min(dsTime, deTime);
+      const hi = Math.max(dsTime, deTime);
+      if (t === lo && t === hi) cls += ' start end';
+      else if (t === lo) cls += ' start';
+      else if (t === hi) cls += ' end';
+      else if (t > lo && t < hi) cls += ' in-range';
+    } else if (dsTime && t === dsTime) {
+      cls += ' start end';
     }
+
     html += `<div class="${cls}" onclick="onDayClick('${dateStr}')" onmouseenter="onDayHover('${dateStr}')">${d}</div>`;
   }
 
@@ -1472,40 +1501,25 @@ function onDayClick(dateStr) {
   const travelType = document.getElementById('fTravelType').value;
   if (!travelType) { toast('先に出張タイプを選択してください', 'info'); return; }
 
-  if (travelType === 'day_trip' || travelType === 'night_shift') {
-    // 日帰り・夜勤: start/end どちらも選択
-    if (calStep === 0 || !calStartDate) {
-      calStartDate = dateStr;
-      calEndDate = null;
-      calStep = 1;
-    } else {
-      if (dateStr < calStartDate) {
-        calEndDate = calStartDate;
-        calStartDate = dateStr;
-      } else {
-        calEndDate = dateStr;
-      }
-      calStep = 0;
-    }
+  if (calStep === 0 || !calStartDate) {
+    // 1クリック目: 開始日セット
+    calStartDate = dateStr;
+    calEndDate = null;
+    calHover = null;
+    calStep = 1;
   } else {
-    // 宿泊: start → end
-    if (calStep === 0 || !calStartDate) {
+    // 2クリック目: 終了日セット（前後入れ替え対応）
+    if (dateStr < calStartDate) {
+      calEndDate = calStartDate;
       calStartDate = dateStr;
-      calEndDate = null;
-      calStep = 1;
     } else {
-      if (dateStr <= calStartDate) {
-        calStartDate = dateStr;
-        calEndDate = null;
-      } else {
-        calEndDate = dateStr;
-        calStep = 0;
-      }
+      calEndDate = dateStr;
     }
+    calHover = null;
+    calStep = 0;
   }
-  calHover = null;
   renderCalendar();
-  if (calStartDate && calEndDate) updateAmounts();
+  if (calStartDate && calEndDate) { updateDateDisplay(); updateAmounts(); }
 }
 
 function onDayHover(dateStr) {
@@ -1524,6 +1538,7 @@ function clearCalendar() {
 function applyCalendar() {
   if (!calStartDate) { toast('日付を選択してください', 'error'); return; }
   if (!calEndDate) calEndDate = calStartDate;
+  calStep = 0;
   document.getElementById('calendarPopup').classList.remove('open');
   updateDateDisplay();
   updateAmounts();
@@ -1612,6 +1627,9 @@ function openNewRequest() {
   document.getElementById('fTaskName').value = '';
   document.getElementById('fTravelType').value = '';
   document.getElementById('fPaymentDate').value = '';
+  payCalSelected = '';
+  const payTxt = document.getElementById('payDateText');
+  if (payTxt) { payTxt.textContent = '未設定'; payTxt.style.color = 'var(--text3)'; }
   document.getElementById('fNotes').value = '';
   calStartDate = null; calEndDate = null; calHover = null; calStep = 0;
   updateDateDisplay();
@@ -1633,6 +1651,16 @@ async function editRequest(id) {
   document.getElementById('fTaskName').value = r.task_name || '';
   document.getElementById('fTravelType').value = r.travel_type || '';
   document.getElementById('fPaymentDate').value = r.payment_date || '';
+  if (r.payment_date) {
+    payCalSelected = r.payment_date;
+    const [y, m, d] = r.payment_date.split('-');
+    const txt = document.getElementById('payDateText');
+    if (txt) { txt.textContent = `${y}年${parseInt(m)}月${parseInt(d)}日`; txt.style.color = 'var(--text)'; }
+  } else {
+    payCalSelected = '';
+    const txt = document.getElementById('payDateText');
+    if (txt) { txt.textContent = '未設定'; txt.style.color = 'var(--text3)'; }
+  }
   document.getElementById('fNotes').value = r.notes || '';
   calStartDate = r.start_date;
   calEndDate = r.end_date;
@@ -1692,6 +1720,12 @@ function addMemberRow(name = '', amount = 0, isRefunded = false, detId = null, o
   const emp = employees.find(e => e.name === name);
   const empOffice = office || emp?.department || '';
 
+  // 金額が0の場合は現在の出張設定から自動計算
+  if (!amount && calStartDate) {
+    const travelType = document.getElementById('fTravelType').value;
+    amount = calculateAmount(travelType, calStartDate, calEndDate || calStartDate);
+  }
+
   const row = document.createElement('tr');
   row.id = id;
   row.dataset.detId = detId || '';
@@ -1699,16 +1733,15 @@ function addMemberRow(name = '', amount = 0, isRefunded = false, detId = null, o
   row.innerHTML = `
     <td style="min-width:160px">
       <select class="member-name" onchange="updateMemberName(this)" style="padding:5px 8px;font-size:12px;width:100%">
-        <option value="">選択または入力</option>
+        <option value="">氏名を選択</option>
         ${empOptions}
       </select>
-      <input class="member-name-input" type="text" value="${name}" placeholder="氏名を入力" style="margin-top:4px;padding:5px 8px;font-size:12px;width:100%" oninput="updateTotal()" />
     </td>
-    <td style="white-space:nowrap;font-size:11px;color:var(--text2)" class="member-office-cell">${empOffice}</td>
+    <td style="white-space:nowrap;font-size:12px;color:var(--text2)" class="member-office-cell">${empOffice}</td>
     <td>
       <div style="display:flex;align-items:center;gap:6px">
         <input class="member-amount" type="number" value="${amount}" style="width:90px;padding:5px 8px;font-size:12px" oninput="updateAmountDisplay(this)" />
-        <span class="amount-display" style="font-size:12px">¥${amount.toLocaleString()}</span>
+        <span class="amount-display" style="font-size:12px;color:var(--green);font-weight:600">¥${amount.toLocaleString()}</span>
       </div>
     </td>
     <td>
@@ -1719,26 +1752,20 @@ function addMemberRow(name = '', amount = 0, isRefunded = false, detId = null, o
     </td>
   `;
   document.getElementById('membersBody').appendChild(row);
-
-  const sel = row.querySelector('.member-name');
-  if (name) {
-    const opt = Array.from(sel.options).find(o => o.value === name);
-    if (opt) sel.value = name;
-  }
+  updateTotal();
 }
 
 function updateMemberName(sel) {
   const row = sel.closest('tr');
-  const input = row.querySelector('.member-name-input');
   if (sel.value) {
-    input.value = sel.value;
     const emp = employees.find(e => e.name === sel.value);
     const officeCell = row.querySelector('.member-office-cell');
-    if (emp && officeCell) {
-      officeCell.textContent = emp.department || '';
-      row.dataset.office = emp.department || '';
+    if (officeCell) {
+      officeCell.textContent = emp?.department || '';
+      row.dataset.office = emp?.department || '';
     }
   }
+  updateTotal();
 }
 
 function updateAmountDisplay(input) {
@@ -1768,11 +1795,10 @@ async function saveRequest() {
 
   const members = [];
   document.querySelectorAll('#membersBody tr').forEach(row => {
-    const nameInput = row.querySelector('.member-name-input');
     const nameSel = row.querySelector('.member-name');
     const amountInput = row.querySelector('.member-amount');
-    if (!nameInput || !amountInput) return;
-    const name = nameInput.value.trim() || nameSel?.value;
+    if (!nameSel || !amountInput) return;
+    const name = nameSel.value;
     const amount = parseInt(amountInput.value) || 0;
     if (name) {
       members.push({ name, amount, detId: row.dataset.detId || null });
@@ -2020,6 +2046,88 @@ async function toggleTask(id, isActive) {
   await sbPatch(`business_tasks?id=eq.${id}`, { is_active: !isActive });
   loadTasks();
 }
+
+
+// ============================================================
+// 支給日カレンダー
+// ============================================================
+let payCalYear, payCalMonth, payCalSelected = '';
+
+function togglePayCal() {
+  const popup = document.getElementById('payCalPopup');
+  if (popup.classList.contains('open')) {
+    popup.classList.remove('open');
+  } else {
+    const now = new Date();
+    payCalYear = now.getFullYear();
+    payCalMonth = now.getMonth();
+    renderPayCal();
+    // 位置設定
+    const display = document.getElementById('payDateDisplay');
+    const rect = display.getBoundingClientRect();
+    popup.style.top = (rect.bottom + 6) + 'px';
+    popup.style.left = rect.left + 'px';
+    popup.classList.add('open');
+  }
+}
+
+function payCalPrev() { payCalMonth--; if (payCalMonth < 0) { payCalMonth = 11; payCalYear--; } renderPayCal(); }
+function payCalNext() { payCalMonth++; if (payCalMonth > 11) { payCalMonth = 0; payCalYear++; } renderPayCal(); }
+
+function renderPayCal() {
+  const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  document.getElementById('payCalMonthYear').textContent = `${payCalYear}年 ${months[payCalMonth]}`;
+  const grid = document.getElementById('payCalGrid');
+  const dayNames = ['日','月','火','水','木','金','土'];
+  let html = dayNames.map(d => `<div class="cal-day-name">${d}</div>`).join('');
+  const firstDay = new Date(payCalYear, payCalMonth, 1).getDay();
+  const daysInMonth = new Date(payCalYear, payCalMonth + 1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+  for (let i = 0; i < firstDay; i++) html += `<div class="cal-day empty"></div>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${payCalYear}-${String(payCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = new Date(payCalYear, payCalMonth, d).getTime() === today.getTime();
+    const isSelected = dateStr === payCalSelected;
+    let cls = 'cal-day';
+    if (isToday) cls += ' today';
+    if (isSelected) cls += ' start end';
+    html += `<div class="${cls}" onclick="selectPayDate('${dateStr}')">${d}</div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function selectPayDate(dateStr) {
+  payCalSelected = dateStr;
+  document.getElementById('fPaymentDate').value = dateStr;
+  const [y, m, d] = dateStr.split('-');
+  document.getElementById('payDateText').textContent = `${y}年${parseInt(m)}月${parseInt(d)}日`;
+  document.getElementById('payDateText').style.color = 'var(--text)';
+  renderPayCal();
+}
+
+function clearPayCal() {
+  payCalSelected = '';
+  document.getElementById('fPaymentDate').value = '';
+  payCalSelected = '';
+  const payTxt = document.getElementById('payDateText');
+  if (payTxt) { payTxt.textContent = '未設定'; payTxt.style.color = 'var(--text3)'; }
+  document.getElementById('payDateText').textContent = '未設定';
+  document.getElementById('payDateText').style.color = 'var(--text3)';
+  renderPayCal();
+}
+
+function closePayCal() {
+  document.getElementById('payCalPopup').classList.remove('open');
+}
+
+// 支給日カレンダーを外クリックで閉じる
+document.addEventListener('click', (e) => {
+  const popup = document.getElementById('payCalPopup');
+  const display = document.getElementById('payDateDisplay');
+  if (popup && display && !popup.contains(e.target) && !display.contains(e.target)) {
+    popup.classList.remove('open');
+  }
+});
 
 // ============================================================
 // MODAL UTILS
