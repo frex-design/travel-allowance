@@ -692,6 +692,11 @@
         </div>
         <button class="btn btn-ghost btn-sm" onclick="loadDashboard(); toast('更新しました', 'info')">🔄 更新</button>
       </div>
+      <div class="tabs" style="margin-bottom:16px">
+        <button class="tab-btn active" onclick="filterOffice('all', this)">全事業所</button>
+        <button class="tab-btn" onclick="filterOffice('秋田事業所', this)">🏢 秋田事業所</button>
+        <button class="tab-btn" onclick="filterOffice('横手事業所', this)">🏢 横手事業所</button>
+      </div>
       <div class="stats-grid" id="statsGrid">
         <div class="stat-card">
           <div class="stat-label">今月の支給合計</div>
@@ -742,6 +747,14 @@
         </div>
         <button class="btn btn-primary" onclick="openNewRequest()">＋ 新規登録</button>
       </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.5px">事業所</span>
+        <div class="tabs" style="margin-bottom:0">
+          <button class="tab-btn active" onclick="filterOfficeReq('all', this)">全事業所</button>
+          <button class="tab-btn" onclick="filterOfficeReq('秋田事業所', this)">🏢 秋田</button>
+          <button class="tab-btn" onclick="filterOfficeReq('横手事業所', this)">🏢 横手</button>
+        </div>
+      </div>
       <div class="tabs">
         <button class="tab-btn active" onclick="filterStatus('all', this)">すべて</button>
         <button class="tab-btn" onclick="filterStatus('pending', this)">未支給</button>
@@ -764,6 +777,7 @@
             <tr>
               <th>支給日</th>
               <th>業務名</th>
+              <th>事業所</th>
               <th>出張タイプ</th>
               <th>期間</th>
               <th>参加人数</th>
@@ -838,12 +852,20 @@
       </div>
       <div class="form-grid">
         <div class="form-group">
+          <label>事業所 *</label>
+          <select id="fOffice" onchange="onOfficeChange()">
+            <option value="">選択してください</option>
+            <option value="秋田事業所">🏢 秋田事業所</option>
+            <option value="横手事業所">🏢 横手事業所</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label>業務名 *</label>
           <select id="fTaskId" onchange="onTaskChange()">
             <option value="">業務を選択...</option>
           </select>
         </div>
-        <div class="form-group">
+        <div class="form-group full">
           <label>業務名（直接入力・未登録業務）</label>
           <input id="fTaskName" placeholder="または直接入力" />
         </div>
@@ -897,6 +919,7 @@
           <thead>
             <tr>
               <th>氏名 *</th>
+              <th>事業所</th>
               <th>支給金額</th>
               <th>返還</th>
               <th></th>
@@ -1070,6 +1093,8 @@ let allDetails = [];
 let employees = [];
 let tasks = [];
 let currentStatus = 'all';
+let currentOfficeDash = 'all';
+let currentOfficeReq = 'all';
 let editingId = null;
 
 // Calendar state
@@ -1131,17 +1156,19 @@ async function loadDashboard() {
   if (reqRes.data) allRequests = reqRes.data;
   if (detRes.data) allDetails = detRes.data;
 
-  // Stats
-  const monthlyReqs = allRequests.filter(r =>
+  // Stats（事業所フィルター適用）
+  const officeReqs = currentOfficeDash === 'all' ? allRequests : allRequests.filter(r => r.office === currentOfficeDash);
+  const monthlyReqs = officeReqs.filter(r =>
     r.payment_date && r.payment_date.startsWith(month) && r.status === 'paid'
   );
   const monthlyTotal = monthlyReqs.reduce((s, r) => {
     const dets = allDetails.filter(d => d.request_id === r.id && !d.is_refunded);
     return s + dets.reduce((a, d) => a + d.allowance_amount, 0);
   }, 0);
-  const paidCount = allRequests.filter(r => r.status === 'paid').length;
-  const pendingCount = allRequests.filter(r => r.status === 'pending').length;
-  const refundedTotal = allDetails.filter(d => d.is_refunded).reduce((s, d) => s + d.allowance_amount, 0);
+  const paidCount = officeReqs.filter(r => r.status === 'paid').length;
+  const pendingCount = officeReqs.filter(r => r.status === 'pending').length;
+  const refundedIds = officeReqs.map(r => r.id);
+  const refundedTotal = allDetails.filter(d => d.is_refunded && refundedIds.includes(d.request_id)).reduce((s, d) => s + d.allowance_amount, 0);
 
   document.getElementById('stat-monthly').textContent = `¥${monthlyTotal.toLocaleString()}`;
   document.getElementById('stat-paid').textContent = paidCount;
@@ -1149,7 +1176,7 @@ async function loadDashboard() {
   document.getElementById('stat-refunded').textContent = `¥${refundedTotal.toLocaleString()}`;
 
   // Recent table
-  renderRequestsTable('recentTable', allRequests.slice(0, 8), true);
+  renderRequestsTable('recentTable', officeReqs.slice(0, 8), true);
   } catch(e) { console.error('loadDashboard error:', e); }
 }
 
@@ -1166,9 +1193,23 @@ async function loadRequests() {
   applySearch();
 }
 
+function filterOffice(office, btn) {
+  currentOfficeDash = office;
+  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadDashboard();
+}
+
+function filterOfficeReq(office, btn) {
+  currentOfficeReq = office;
+  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applySearch();
+}
+
 function filterStatus(status, btn) {
   currentStatus = status;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   applySearch();
 }
@@ -1176,6 +1217,7 @@ function filterStatus(status, btn) {
 function applySearch() {
   const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
   let filtered = allRequests;
+  if (currentOfficeReq !== 'all') filtered = filtered.filter(r => r.office === currentOfficeReq);
   if (currentStatus !== 'all') filtered = filtered.filter(r => r.status === currentStatus);
   if (q) {
     filtered = filtered.filter(r => {
@@ -1191,7 +1233,7 @@ function applySearch() {
 function renderRequestsTable(tableId, reqs, simple) {
   const tbody = document.getElementById(tableId);
   if (!reqs || reqs.length === 0) {
-    tbody.innerHTML = `<tr class="no-data-row"><td colspan="${simple?6:8}">データがありません</td></tr>`;
+    tbody.innerHTML = `<tr class="no-data-row"><td colspan="${simple?6:9}">データがありません</td></tr>`;
     return;
   }
   tbody.innerHTML = reqs.map(r => {
@@ -1205,6 +1247,11 @@ function renderRequestsTable(tableId, reqs, simple) {
     const [sc, sl] = statusMap[r.status] || ['',''];
     const refundNote = refunded > 0 ? `<div style="font-size:11px;color:var(--red);margin-top:2px">返還 ¥${refunded.toLocaleString()}</div>` : '';
     
+    const officeBadge = r.office === '秋田事業所'
+      ? '<span class="badge" style="background:rgba(59,130,246,.1);color:#1a5ca8;font-size:10px">秋田</span>'
+      : r.office === '横手事業所'
+      ? '<span class="badge" style="background:rgba(58,125,68,.1);color:#2d6235;font-size:10px">横手</span>'
+      : '<span style="color:var(--text3);font-size:11px">—</span>';
     if (simple) {
       return `<tr>
         <td>${r.task_name}</td>
@@ -1218,6 +1265,7 @@ function renderRequestsTable(tableId, reqs, simple) {
     return `<tr>
       <td style="font-size:12px;color:var(--text2)">${r.payment_date || '—'}</td>
       <td style="font-weight:500">${r.task_name}</td>
+      <td>${officeBadge}</td>
       <td><span class="badge ${typeBadge}">${typeLabel}</span></td>
       <td style="font-size:12px;color:var(--text2)">${period}</td>
       <td style="font-family:var(--mono)">${dets.length}名</td>
@@ -1251,6 +1299,10 @@ async function showDetail(id) {
       <div class="detail-section">
         <div class="detail-label">業務名</div>
         <div class="detail-value" style="font-weight:600;font-size:16px">${r.task_name}</div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-label">事業所</div>
+        <div class="detail-value">${r.office || '—'}</div>
       </div>
       <div class="detail-section">
         <div class="detail-label">ステータス</div>
@@ -1549,6 +1601,7 @@ function updateTotal() {
 function openNewRequest() {
   editingId = null;
   document.getElementById('requestModalTitle').textContent = '出張手当 新規登録';
+  document.getElementById('fOffice').value = '';
   document.getElementById('fTaskId').value = '';
   document.getElementById('fTaskName').value = '';
   document.getElementById('fTravelType').value = '';
@@ -1569,6 +1622,7 @@ async function editRequest(id) {
   editingId = id;
   document.getElementById('requestModalTitle').textContent = '出張手当 編集';
   await populateSelects();
+  document.getElementById('fOffice').value = r.office || '';
   document.getElementById('fTaskId').value = r.task_id || '';
   document.getElementById('fTaskName').value = r.task_name || '';
   document.getElementById('fTravelType').value = r.travel_type || '';
@@ -1593,6 +1647,18 @@ function onTaskChange() {
   }
 }
 
+function onOfficeChange() {
+  // 事業所が変わったらメンバーselectの選択肢を絞り込む
+  document.querySelectorAll('#membersBody tr').forEach(row => {
+    const sel = row.querySelector('.member-name');
+    const currentName = row.querySelector('.member-name-input')?.value || '';
+    if (sel) {
+      const opts = getFilteredEmpOptions(currentName);
+      sel.innerHTML = '<option value="">選択または入力</option>' + opts;
+    }
+  });
+}
+
 function onTravelTypeChange() {
   updateAmounts();
 }
@@ -1607,23 +1673,32 @@ async function populateSelects() {
 }
 
 let memberRowCount = 0;
-function addMemberRow(name = '', amount = 0, isRefunded = false, detId = null) {
+function getFilteredEmpOptions(selectedName) {
+  const office = document.getElementById('fOffice')?.value || '';
+  const filtered = employees.filter(e => e.is_active && (!office || e.department === office));
+  return filtered.map(e => `<option value="${e.name}" ${e.name === selectedName ? 'selected' : ''}>${e.name}</option>`).join('');
+}
+
+function addMemberRow(name = '', amount = 0, isRefunded = false, detId = null, office = '') {
   memberRowCount++;
   const id = `member-${memberRowCount}`;
-  const empOptions = employees.filter(e => e.is_active)
-    .map(e => `<option value="${e.name}" ${e.name === name ? 'selected' : ''}>${e.name}</option>`).join('');
-  
+  const empOptions = getFilteredEmpOptions(name);
+  const emp = employees.find(e => e.name === name);
+  const empOffice = office || emp?.department || '';
+
   const row = document.createElement('tr');
   row.id = id;
   row.dataset.detId = detId || '';
+  row.dataset.office = empOffice;
   row.innerHTML = `
-    <td style="min-width:180px">
-      <select class="member-name" onchange="updateMemberName(this)" style="padding:5px 8px;font-size:12px">
+    <td style="min-width:160px">
+      <select class="member-name" onchange="updateMemberName(this)" style="padding:5px 8px;font-size:12px;width:100%">
         <option value="">選択または入力</option>
         ${empOptions}
       </select>
-      <input class="member-name-input" type="text" value="${name}" placeholder="氏名を入力" style="margin-top:4px;padding:5px 8px;font-size:12px" oninput="updateTotal()" />
+      <input class="member-name-input" type="text" value="${name}" placeholder="氏名を入力" style="margin-top:4px;padding:5px 8px;font-size:12px;width:100%" oninput="updateTotal()" />
     </td>
+    <td style="white-space:nowrap;font-size:11px;color:var(--text2)" class="member-office-cell">${empOffice}</td>
     <td>
       <div style="display:flex;align-items:center;gap:6px">
         <input class="member-amount" type="number" value="${amount}" style="width:90px;padding:5px 8px;font-size:12px" oninput="updateAmountDisplay(this)" />
@@ -1638,8 +1713,7 @@ function addMemberRow(name = '', amount = 0, isRefunded = false, detId = null) {
     </td>
   `;
   document.getElementById('membersBody').appendChild(row);
-  
-  // Set select value
+
   const sel = row.querySelector('.member-name');
   if (name) {
     const opt = Array.from(sel.options).find(o => o.value === name);
@@ -1650,7 +1724,15 @@ function addMemberRow(name = '', amount = 0, isRefunded = false, detId = null) {
 function updateMemberName(sel) {
   const row = sel.closest('tr');
   const input = row.querySelector('.member-name-input');
-  if (sel.value) input.value = sel.value;
+  if (sel.value) {
+    input.value = sel.value;
+    const emp = employees.find(e => e.name === sel.value);
+    const officeCell = row.querySelector('.member-office-cell');
+    if (emp && officeCell) {
+      officeCell.textContent = emp.department || '';
+      row.dataset.office = emp.department || '';
+    }
+  }
 }
 
 function updateAmountDisplay(input) {
@@ -1698,8 +1780,10 @@ async function saveRequest() {
   btn.disabled = true;
 
   let reqId = editingId;
+  const office = document.getElementById('fOffice').value || null;
   const reqData = {
     task_id: taskId, task_name: taskName, travel_type: travelType,
+    office: office,
     start_date: calStartDate, end_date: endDate,
     payment_date: paymentDate, notes, status: 'pending'
   };
