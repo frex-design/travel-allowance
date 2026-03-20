@@ -44,7 +44,7 @@
       radial-gradient(ellipse 60% 50% at 88% 80%, rgba(196,149,106,0.08) 0%, transparent 55%),
       radial-gradient(ellipse 50% 50% at 50% 45%, rgba(240,210,180,0.12) 0%, transparent 70%);
   }
-  body > * { position: relative; z-index: 1; }
+  /* body > * の z-index は削除 — モーダルが背面に隠れる原因になるため */
 
   /* ===== HEADER ===== */
   header {
@@ -256,7 +256,7 @@
     position: fixed; inset: 0;
     background: rgba(44,31,20,.35);
     backdrop-filter: blur(4px);
-    z-index: 500;
+    z-index: 9999;
     display: none;
     align-items: center;
     justify-content: center;
@@ -611,7 +611,7 @@
 <body>
 
 <!-- ===== CONFIG ===== -->
-<div id="configOverlay" class="modal-overlay open" style="z-index:2000">
+<div id="configOverlay" class="modal-overlay open" style="z-index:10000">
   <div class="modal" style="max-width:500px">
     <div class="modal-header">
       <div class="modal-title">⚙️ Supabase 接続設定</div>
@@ -682,20 +682,20 @@
     <div style="margin:20px 12px 0;border-top:1px solid var(--border);padding-top:16px">
       <div style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;padding:0 8px">今日の支給</div>
 
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px">
+      <div onclick="showTodayDetail('秋田事業所')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
         <div style="font-size:10px;color:var(--text3);margin-bottom:6px;font-weight:600">🏢 秋田事業所</div>
         <div id="today-akita-amount" style="font-size:18px;font-weight:700;font-family:var(--mono);color:var(--accent)">¥ —</div>
         <div id="today-akita-count" style="font-size:11px;color:var(--text3);margin-top:2px">— 名</div>
       </div>
 
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px">
+      <div onclick="showTodayDetail('横手事業所')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
         <div style="font-size:10px;color:var(--text3);margin-bottom:6px;font-weight:600">🏢 横手事業所</div>
         <div id="today-yokote-amount" style="font-size:18px;font-weight:700;font-family:var(--mono);color:var(--accent)">¥ —</div>
         <div id="today-yokote-count" style="font-size:11px;color:var(--text3);margin-top:2px">— 名</div>
       </div>
 
-      <div style="background:rgba(181,96,26,.08);border:1px solid rgba(181,96,26,.2);border-radius:8px;padding:10px 12px">
-        <div style="font-size:10px;color:var(--text3);margin-bottom:4px;font-weight:600">合計</div>
+      <div onclick="showTodayDetail('')" style="background:rgba(181,96,26,.08);border:1px solid rgba(181,96,26,.2);border-radius:8px;padding:10px 12px;cursor:pointer;transition:opacity .15s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px;font-weight:600">合計（クリックで詳細）</div>
         <div id="today-total-amount" style="font-size:20px;font-weight:700;font-family:var(--mono);color:var(--accent)">¥ —</div>
       </div>
 
@@ -1040,6 +1040,20 @@
   </div>
 </div>
 
+<!-- ===== MODAL: 今日の支給詳細 ===== -->
+<div class="modal-overlay" id="todayDetailModal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title" id="todayDetailTitle">今日の支給詳細</div>
+      <button class="modal-close" onclick="closeModal('todayDetailModal')">✕</button>
+    </div>
+    <div class="modal-body" id="todayDetailBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('todayDetailModal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ============================================================
 // CONFIG
@@ -1195,27 +1209,16 @@ async function loadDashboard() {
       ? allRequests
       : allRequests.filter(r => r.office === currentOfficeDash);
 
-    // ── 今月の支給合計 ──
-    // payment_date が今月 OR payment_date未設定で start_date が今月 のどちらかで集計
+    // ── 今月の支給合計（当月 start_date のデータをすべて合計）──
     const monthlyReqs = officeReqs.filter(r => {
-      if (r.status !== 'paid') return false;
-      if (r.payment_date) return r.payment_date.startsWith(month);
-      return r.start_date && r.start_date.startsWith(month);
+      if (r.status === 'cancelled') return false;
+      const dateKey = r.start_date || r.payment_date || '';
+      return dateKey.startsWith(month);
     });
     const monthlyTotal = monthlyReqs.reduce((s, r) => {
       const dets = allDetails.filter(d => d.request_id === r.id && !d.is_refunded);
       return s + dets.reduce((a, d) => a + (d.allowance_amount || 0), 0);
     }, 0);
-
-    // デバッグ情報をコンソールに出力
-    console.log('=== ダッシュボード集計デバッグ ===');
-    console.log('今月:', month);
-    console.log('全件数:', allRequests.length, '件');
-    console.log('ステータス一覧:', allRequests.map(r => r.status));
-    console.log('今月対象件数:', monthlyReqs.length, '件');
-    console.log('明細件数:', allDetails.length, '件');
-    console.log('明細サンプル:', allDetails.slice(0,3));
-    console.log('今月合計:', monthlyTotal);
 
     const paidCount    = officeReqs.filter(r => r.status === 'paid').length;
     const pendingCount = officeReqs.filter(r => r.status === 'pending').length;
@@ -1286,6 +1289,80 @@ function renderTodayWidget() {
   const [y,m,d] = today.split('-');
   document.getElementById('today-date-label').textContent =
     y + '年' + parseInt(m) + '月' + parseInt(d) + '日 時点';
+}
+
+function showTodayDetail(office) {
+  const today = (function() {
+    const t = new Date();
+    return t.getFullYear() + '-' +
+      String(t.getMonth()+1).padStart(2,'0') + '-' +
+      String(t.getDate()).padStart(2,'0');
+  })();
+
+  const todayReqs = allRequests.filter(function(r) {
+    if (r.status === 'cancelled') return false;
+    const match = r.payment_date ? r.payment_date === today : r.start_date === today;
+    if (!match) return false;
+    return !office || r.office === office;
+  });
+
+  const label = office || '全事業所';
+  const [y,m,d] = today.split('-');
+  document.getElementById('todayDetailTitle').textContent =
+    '今日の支給詳細 ─ ' + label + '（' + y + '年' + parseInt(m) + '月' + parseInt(d) + '日）';
+
+  if (todayReqs.length === 0) {
+    document.getElementById('todayDetailBody').innerHTML =
+      '<div style="text-align:center;color:var(--text3);padding:32px">本日の支給データはありません</div>';
+    openModal('todayDetailModal');
+    return;
+  }
+
+  let totalAll = 0;
+  const rows = todayReqs.map(function(r) {
+    const dets = allDetails.filter(function(d) {
+      return d.request_id === r.id && !d.is_refunded;
+    });
+    const total = dets.reduce(function(s,d){ return s + (d.allowance_amount||0); }, 0);
+    totalAll += total;
+    const typeLabel = {day_trip:'日帰り', overnight:'宿泊', night_shift:'夜勤'}[r.travel_type] || r.travel_type;
+    const memberRows = dets.map(function(d) {
+      return '<tr>' +
+        '<td style="padding:6px 12px;font-size:12px">' + d.employee_name + '</td>' +
+        '<td style="padding:6px 12px;font-size:12px;font-family:var(--mono);color:var(--green);font-weight:600">¥' + (d.allowance_amount||0).toLocaleString() + '</td>' +
+      '</tr>';
+    }).join('');
+
+    return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">' +
+        '<div>' +
+          '<div style="font-weight:600;font-size:14px">' + r.task_name + '</div>' +
+          '<div style="font-size:11px;color:var(--text3);margin-top:2px">' +
+            typeLabel + ' ／ ' + r.start_date +
+            (r.end_date && r.end_date !== r.start_date ? ' 〜 ' + r.end_date : '') +
+            (r.office ? ' ／ ' + r.office : '') +
+          '</div>' +
+        '</div>' +
+        '<div style="font-family:var(--mono);font-weight:700;font-size:16px;color:var(--accent)">¥' + total.toLocaleString() + '</div>' +
+      '</div>' +
+      '<table style="width:100%;border-collapse:collapse;border-top:1px solid var(--border)">' +
+        '<thead><tr style="background:var(--bg)">' +
+          '<th style="padding:5px 12px;font-size:10px;color:var(--text3);text-align:left;font-weight:600">氏名</th>' +
+          '<th style="padding:5px 12px;font-size:10px;color:var(--text3);text-align:left;font-weight:600">支給額</th>' +
+        '</tr></thead>' +
+        '<tbody>' + memberRows + '</tbody>' +
+      '</table>' +
+    '</div>';
+  }).join('');
+
+  document.getElementById('todayDetailBody').innerHTML =
+    rows +
+    '<div style="border-top:2px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;align-items:center">' +
+      '<span style="font-weight:700;font-size:13px">合計</span>' +
+      '<span style="font-family:var(--mono);font-weight:700;font-size:20px;color:var(--accent)">¥' + totalAll.toLocaleString() + '</span>' +
+    '</div>';
+
+  openModal('todayDetailModal');
 }
 
 function renderTaskSummary(reqs) {
@@ -2104,10 +2181,14 @@ async function toggleTask(id, isActive) {
 // MODAL UTILS
 // ============================================================
 function openModal(id) {
-  document.getElementById(id).classList.add('open');
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('open');
 }
 function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('open');
 }
 </script>
 </body>
