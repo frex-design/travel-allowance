@@ -1862,39 +1862,70 @@ function renderMiniCal(key) {
   var mNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
   var td = new Date();
   var todayStr = td.getFullYear()+'-'+String(td.getMonth()+1).padStart(2,'0')+'-'+String(td.getDate()).padStart(2,'0');
-
-  // 現在の選択値
   var inputId = key === 'pay' ? 'fPaymentDate' : (key === 'trip-start' ? 'calStartInput' : 'calEndInput');
   var selVal = (document.getElementById(inputId)||{}).value || '';
 
-  var firstDay = new Date(s.year, s.month, 1).getDay();
-  var daysInMonth = new Date(s.year, s.month+1, 0).getDate();
-  var dayNames = ['日','月','火','水','木','金','土'];
+  popup.innerHTML = '';
 
-  var grid = '';
-  dayNames.forEach(function(n) {
-    grid += '<div style="text-align:center;font-size:10px;font-weight:600;color:var(--text3);padding:4px">' + n + '</div>';
+  // ヘッダー（◀ 年月 ▶）
+  var header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px';
+  var btnPrev = document.createElement('button');
+  btnPrev.type = 'button';
+  btnPrev.textContent = '◀';
+  btnPrev.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:4px 10px;cursor:pointer;font-size:14px;color:var(--text2)';
+  btnPrev.onclick = function() { miniCalPrev(key); };
+  var title = document.createElement('span');
+  title.style.cssText = 'font-size:13px;font-weight:700;color:var(--text)';
+  title.textContent = s.year + '年 ' + mNames[s.month];
+  var btnNext = document.createElement('button');
+  btnNext.type = 'button';
+  btnNext.textContent = '▶';
+  btnNext.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:4px 10px;cursor:pointer;font-size:14px;color:var(--text2)';
+  btnNext.onclick = function() { miniCalNext(key); };
+  header.appendChild(btnPrev);
+  header.appendChild(title);
+  header.appendChild(btnNext);
+  popup.appendChild(header);
+
+  // グリッド
+  var grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(7,1fr);gap:2px';
+
+  // 曜日ヘッダー
+  ['日','月','火','水','木','金','土'].forEach(function(n) {
+    var cell = document.createElement('div');
+    cell.style.cssText = 'text-align:center;font-size:10px;font-weight:600;color:var(--text3);padding:4px';
+    cell.textContent = n;
+    grid.appendChild(cell);
   });
-  for (var i = 0; i < firstDay; i++) grid += '<div></div>';
-  for (var d = 1; d <= daysInMonth; d++) {
-    var ds = s.year+'-'+String(s.month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    var isToday = ds === todayStr;
-    var isSel   = ds === selVal;
-    var bg   = isSel ? 'var(--accent)' : 'transparent';
-    var col  = isSel ? '#fff' : (isToday ? 'var(--accent)' : 'var(--text)');
-    var fw   = (isSel || isToday) ? '700' : '400';
-    grid += '<div onclick="selectMiniCal('' + key + '','' + ds + '')" ' +
-      'style="text-align:center;padding:5px 2px;font-size:12px;cursor:pointer;border-radius:5px;' +
-      'background:' + bg + ';color:' + col + ';font-weight:' + fw + '">' + d + '</div>';
+
+  // 空白セル
+  var firstDay = new Date(s.year, s.month, 1).getDay();
+  for (var i = 0; i < firstDay; i++) {
+    grid.appendChild(document.createElement('div'));
   }
 
-  popup.innerHTML =
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
-      '<button type="button" onclick="miniCalPrev('' + key + '')" style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:4px 10px;cursor:pointer;font-size:14px;color:var(--text2)">◀</button>' +
-      '<span style="font-size:13px;font-weight:700">' + s.year + '年 ' + mNames[s.month] + '</span>' +
-      '<button type="button" onclick="miniCalNext('' + key + '')" style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:4px 10px;cursor:pointer;font-size:14px;color:var(--text2)">▶</button>' +
-    '</div>' +
-    '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">' + grid + '</div>';
+  // 日付セル
+  var daysInMonth = new Date(s.year, s.month+1, 0).getDate();
+  for (var d = 1; d <= daysInMonth; d++) {
+    (function(day) {
+      var ds = s.year+'-'+String(s.month+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+      var isToday = ds === todayStr;
+      var isSel   = ds === selVal;
+      var cell = document.createElement('div');
+      cell.textContent = String(day);
+      cell.style.cssText = 'text-align:center;padding:6px 2px;font-size:12px;cursor:pointer;border-radius:5px;' +
+        'background:' + (isSel ? 'var(--accent)' : 'transparent') + ';' +
+        'color:' + (isSel ? '#fff' : (isToday ? 'var(--accent)' : 'var(--text)')) + ';' +
+        'font-weight:' + ((isSel || isToday) ? '700' : '400');
+      cell.onmouseenter = function() { if (!isSel) this.style.background = 'var(--surface2)'; };
+      cell.onmouseleave = function() { if (!isSel) this.style.background = 'transparent'; };
+      cell.onclick = function() { selectMiniCal(key, ds); };
+      grid.appendChild(cell);
+    })(d);
+  }
+  popup.appendChild(grid);
 }
 
 function miniCalPrev(key) {
