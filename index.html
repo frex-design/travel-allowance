@@ -1194,7 +1194,7 @@ function showPage(id, el) {
   const page = document.getElementById('page-' + id);
   if (page) page.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => {
-    if (n.getAttribute('onclick')?.includes("'" + id + "'")) n.classList.add('active');
+    if ((n.getAttribute('onclick')||'').indexOf(id) !== -1) n.classList.add('active');
   });
   if (id === 'dashboard') loadDashboard();
   if (id === 'requests') loadRequests();
@@ -1313,12 +1313,10 @@ function renderTodayWidget() {
 }
 
 function showTodayDetail(office) {
-  const today = (function() {
-    const t = new Date();
-    return t.getFullYear() + '-' +
-      String(t.getMonth()+1).padStart(2,'0') + '-' +
-      String(t.getDate()).padStart(2,'0');
-  })();
+  const td = new Date();
+  const today = td.getFullYear() + '-' +
+    String(td.getMonth()+1).padStart(2,'0') + '-' +
+    String(td.getDate()).padStart(2,'0');
 
   const todayReqs = allRequests.filter(function(r) {
     if (r.status === 'cancelled') return false;
@@ -1328,56 +1326,124 @@ function showTodayDetail(office) {
   });
 
   const label = office || '全事業所';
-  const [y,m,d] = today.split('-');
+  const parts = today.split('-');
   document.getElementById('todayDetailTitle').textContent =
-    '今日の支給詳細 ─ ' + label + '（' + y + '年' + parseInt(m) + '月' + parseInt(d) + '日）';
+    '今日の支給詳細 - ' + label + '(' + parts[0] + '年' + parseInt(parts[1]) + '月' + parseInt(parts[2]) + '日)';
+
+  const body = document.getElementById('todayDetailBody');
+  body.innerHTML = '';
 
   if (todayReqs.length === 0) {
-    document.getElementById('todayDetailBody').innerHTML =
-      '<div style="text-align:center;color:var(--text3);padding:32px">本日の支給データはありません</div>';
+    const msg = document.createElement('div');
+    msg.style.cssText = 'text-align:center;color:var(--text3);padding:32px';
+    msg.textContent = '本日の支給データはありません';
+    body.appendChild(msg);
     openModal('todayDetailModal');
     return;
   }
 
   let totalAll = 0;
-  const rows = todayReqs.map(function(r) {
+  const typeMap = {day_trip:'日帰り', overnight:'宿泊', night_shift:'夜勤'};
+
+  todayReqs.forEach(function(r) {
     const dets = allDetails.filter(function(d) {
       return d.request_id === r.id && !d.is_refunded;
     });
     const total = dets.reduce(function(s,d){ return s + (d.allowance_amount||0); }, 0);
     totalAll += total;
-    const typeLabel = {day_trip:'日帰り', overnight:'宿泊', night_shift:'夜勤'}[r.travel_type] || r.travel_type;
-    const memberRows = dets.map(function(d) {
-      return '<tr>' +
-        '<td style="padding:6px 12px;font-size:12px">' + d.employee_name + '</td>' +
-        '<td style="padding:6px 12px;font-size:12px;font-family:var(--mono);color:var(--green);font-weight:600">¥' + (d.allowance_amount||0).toLocaleString() + '</td>' +
-      '</tr>';
-    }).join('');
 
-    return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px">' +
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">' +
-        '<div style="flex:1">' +
-          '<div style="font-weight:600;font-size:14px">' + r.task_name + '</div>' +
-          '<div style="font-size:11px;color:var(--text3);margin-top:2px">' +
-            typeLabel + ' ／ ' + r.start_date +
-            (r.end_date && r.end_date !== r.start_date ? ' 〜 ' + r.end_date : '') +
-            (r.office ? ' ／ ' + r.office : '') +
-          '</div>' +
-        '</div>' +
-        '<div style="display:flex;align-items:center;gap:10px">' +
-          '<div style="font-family:var(--mono);font-weight:700;font-size:16px;color:var(--accent)">¥' + total.toLocaleString() + '</div>' +
-          '<button onclick="openDetailFromToday('' + r.id + '')" style="padding:4px 10px;background:var(--accent);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600">詳細</button>' +
-        '</div>' +
-      '</div>' +
-      '<table style="width:100%;border-collapse:collapse;border-top:1px solid var(--border)">' +
-        '<thead><tr style="background:var(--bg)">' +
-          '<th style="padding:5px 12px;font-size:10px;color:var(--text3);text-align:left;font-weight:600">氏名</th>' +
-          '<th style="padding:5px 12px;font-size:10px;color:var(--text3);text-align:left;font-weight:600">支給額</th>' +
-        '</tr></thead>' +
-        '<tbody>' + memberRows + '</tbody>' +
-      '</table>' +
-    '</div>';
-  }).join('');
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px';
+
+    // ヘッダー
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px';
+
+    const info = document.createElement('div');
+    info.style.flex = '1';
+
+    const taskEl = document.createElement('div');
+    taskEl.style.cssText = 'font-weight:600;font-size:14px';
+    taskEl.textContent = r.task_name;
+
+    const subEl = document.createElement('div');
+    subEl.style.cssText = 'font-size:11px;color:var(--text3);margin-top:2px';
+    const tl = typeMap[r.travel_type] || r.travel_type;
+    subEl.textContent = tl + ' / ' + r.start_date +
+      (r.end_date && r.end_date !== r.start_date ? ' ~ ' + r.end_date : '') +
+      (r.office ? ' / ' + r.office : '');
+
+    info.appendChild(taskEl);
+    info.appendChild(subEl);
+
+    const right = document.createElement('div');
+    right.style.cssText = 'display:flex;align-items:center;gap:8px';
+
+    const amtEl = document.createElement('div');
+    amtEl.style.cssText = 'font-family:var(--mono);font-weight:700;font-size:15px;color:var(--accent)';
+    amtEl.textContent = '\u00a5' + total.toLocaleString();
+
+    const btn = document.createElement('button');
+    btn.style.cssText = 'padding:4px 10px;background:var(--accent);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600';
+    btn.textContent = '\u8a73\u7d30';
+    (function(id){ btn.onclick = function(){ openDetailFromToday(id); }; })(r.id);
+
+    right.appendChild(amtEl);
+    right.appendChild(btn);
+    hdr.appendChild(info);
+    hdr.appendChild(right);
+    card.appendChild(hdr);
+
+    // メンバーテーブル
+    const tbl = document.createElement('table');
+    tbl.style.cssText = 'width:100%;border-collapse:collapse;border-top:1px solid var(--border)';
+
+    const thead = document.createElement('thead');
+    const hrow = document.createElement('tr');
+    hrow.style.background = 'var(--bg)';
+    ['\u6c0f\u540d', '\u652f\u7d66\u984d'].forEach(function(txt) {
+      const th = document.createElement('th');
+      th.style.cssText = 'padding:5px 12px;font-size:10px;color:var(--text3);text-align:left;font-weight:600';
+      th.textContent = txt;
+      hrow.appendChild(th);
+    });
+    thead.appendChild(hrow);
+
+    const tbody = document.createElement('tbody');
+    dets.forEach(function(d) {
+      const tr = document.createElement('tr');
+      const td1 = document.createElement('td');
+      td1.style.cssText = 'padding:6px 12px;font-size:12px';
+      td1.textContent = d.employee_name;
+      const td2 = document.createElement('td');
+      td2.style.cssText = 'padding:6px 12px;font-size:12px;font-family:var(--mono);color:var(--green);font-weight:600';
+      td2.textContent = '\u00a5' + (d.allowance_amount||0).toLocaleString();
+      tr.appendChild(td1);
+      tr.appendChild(td2);
+      tbody.appendChild(tr);
+    });
+
+    tbl.appendChild(thead);
+    tbl.appendChild(tbody);
+    card.appendChild(tbl);
+    body.appendChild(card);
+  });
+
+  // 合計フッター
+  const footer = document.createElement('div');
+  footer.style.cssText = 'border-top:2px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;align-items:center';
+  const fl = document.createElement('span');
+  fl.style.cssText = 'font-weight:700;font-size:13px';
+  fl.textContent = '\u5408\u8a08';
+  const fr = document.createElement('span');
+  fr.style.cssText = 'font-family:var(--mono);font-weight:700;font-size:20px;color:var(--accent)';
+  fr.textContent = '\u00a5' + totalAll.toLocaleString();
+  footer.appendChild(fl);
+  footer.appendChild(fr);
+  body.appendChild(footer);
+
+  openModal('todayDetailModal');
+}).join('');
 
   document.getElementById('todayDetailBody').innerHTML =
     rows +
