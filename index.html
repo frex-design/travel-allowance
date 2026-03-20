@@ -963,7 +963,7 @@
       <div class="form-section">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
           <div class="form-section-title">👥 出張メンバー</div>
-          <button class="btn btn-ghost btn-sm" onclick="addMemberRow()">＋ メンバー追加</button>
+          <button class="btn btn-ghost btn-sm" onclick="addMemberRow(); updateAmounts();">＋ メンバー追加</button>
         </div>
         <table class="members-table" id="membersTable">
           <thead>
@@ -1072,10 +1072,7 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('todayDetailModal')">閉じる</button>
     </div>
-  </div>
-</div>
-
-<script>
+  </div
 // ============================================================
 // CONFIG
 // ============================================================
@@ -2103,8 +2100,6 @@ function addMemberRow(name, amount, isRefunded, detId, office) {
     </td>
   `;
   document.getElementById('membersBody').appendChild(row);
-  // 日付・タイプが設定済みなら追加直後に金額を同期
-  updateAmounts();
   updateTotal();
 }
 
@@ -2450,6 +2445,8 @@ function closeModal(id) {
   const el = document.getElementById(id);
   if (!el) return;
   el.style.display = 'none';
+}
+splay = 'none';
 }
 </script>
 </body>
