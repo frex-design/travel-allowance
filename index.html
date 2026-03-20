@@ -2037,6 +2037,8 @@ function addMemberRow(name = '', amount = 0, isRefunded = false, detId = null, o
     </td>
   `;
   document.getElementById('membersBody').appendChild(row);
+  // 日付・タイプが設定済みなら追加直後に金額を同期
+  updateAmounts();
   updateTotal();
 }
 
