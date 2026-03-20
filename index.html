@@ -1827,11 +1827,21 @@ async function openNewRequest() {
 }
 
 async function editRequest(id) {
-  const r = allRequests.filter(function(x){ return x.id === id; })[0];
-  if (!r) return;
+  // allRequestsにない場合はSupabaseから直接取得
+  var r = allRequests.filter(function(x){ return x.id === id; })[0];
+  if (!r) {
+    var res = await sbGet('travel_requests?id=eq.' + id + '&select=*');
+    if (res.data && res.data[0]) r = res.data[0];
+    else { toast('データが見つかりません', 'error'); return; }
+  }
+
   editingId = id;
+  // まずモーダルを開く
   document.getElementById('requestModalTitle').textContent = '出張手当 編集';
-  await populateSelects();
+  openModal('requestModal');
+
+  try { await populateSelects(); } catch(e) { console.warn('populateSelects error:', e); }
+
   document.getElementById('fOffice').value = r.office || '';
   document.getElementById('fTaskId').value = r.task_id || '';
   document.getElementById('fTaskName').value = r.task_name || '';
@@ -1844,8 +1854,9 @@ async function editRequest(id) {
   var ei2 = document.getElementById('calEndInput');
   if (si2) si2.value = r.start_date || '';
   if (ei2) ei2.value = r.end_date   || '';
-  function setMiniText(id, val) {
-    var el = document.getElementById(id);
+
+  function setMiniText(elId, val) {
+    var el = document.getElementById(elId);
     if (!el) return;
     if (val) {
       var p = val.split('-');
@@ -1858,13 +1869,17 @@ async function editRequest(id) {
   setMiniText('tripStartText', r.start_date);
   setMiniText('tripEndText',   r.end_date);
   setMiniText('payText',       r.payment_date);
-  updateDateDisplay();
 
-  const dets = allDetails.filter(function(d) { return d.request_id === id; });
+  // allDetailsにない場合はSupabaseから直接取得
+  var dets = allDetails.filter(function(d) { return d.request_id === id; });
+  if (dets.length === 0) {
+    var detRes = await sbGet('travel_allowance_details?request_id=eq.' + id + '&select=*');
+    if (detRes.data) dets = detRes.data;
+  }
   document.getElementById('membersBody').innerHTML = '';
-  dets.forEach(function(d) { return addMemberRow(d.employee_name, d.allowance_amount, d.is_refunded, d.id); });
+  dets.forEach(function(d) { addMemberRow(d.employee_name, d.allowance_amount, d.is_refunded, d.id); });
+  updateAmounts();
   updateTotal();
-  openModal('requestModal');
 }
 
 function onTaskChange() {
