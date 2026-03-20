@@ -658,8 +658,8 @@
     </div>
   </div>
   <div class="header-actions">
-    <button class="btn btn-ghost btn-sm" onclick="openConfig()">⚙️ 設定</button>
     <button class="btn btn-primary btn-sm" onclick="openNewRequest()">＋ 新規登録</button>
+    <button class="btn btn-ghost btn-sm" onclick="openConfig()">⚙️ 設定</button>
   </div>
 </header>
 
@@ -690,7 +690,7 @@
           <div class="page-title">ダッシュボード</div>
           <div class="page-desc">出張手当の支給状況サマリー</div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="loadDashboard()">🔄 更新</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadDashboard(); toast('更新しました', 'info')">🔄 更新</button>
       </div>
       <div class="stats-grid" id="statsGrid">
         <div class="stat-card">
@@ -757,7 +757,7 @@
               <input class="search-input" placeholder="業務名・氏名で検索" id="searchInput" oninput="applySearch()" />
             </div>
           </div>
-          <button class="btn btn-ghost btn-sm" onclick="loadRequests()">🔄 更新</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadRequests(); toast('更新しました', 'info')">🔄 更新</button>
         </div>
         <table>
           <thead>
@@ -1093,13 +1093,13 @@ function toast(msg, type = 'info') {
 // ============================================================
 // NAV
 // ============================================================
-function showPage(id) {
+function showPage(id, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-' + id).classList.add('active');
-  event.currentTarget && event.currentTarget.classList.add('active');
+  const page = document.getElementById('page-' + id);
+  if (page) page.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => {
-    if (n.getAttribute('onclick')?.includes(id)) n.classList.add('active');
+    if (n.getAttribute('onclick')?.includes("'" + id + "'")) n.classList.add('active');
   });
   if (id === 'dashboard') loadDashboard();
   if (id === 'requests') loadRequests();
@@ -1122,6 +1122,7 @@ async function loadDashboard() {
   const now = new Date();
   const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   
+  try {
   const [reqRes, detRes] = await Promise.all([
     sbGet('travel_requests?select=*&order=created_at.desc'),
     sbGet('travel_allowance_details?select=*')
@@ -1149,6 +1150,7 @@ async function loadDashboard() {
 
   // Recent table
   renderRequestsTable('recentTable', allRequests.slice(0, 8), true);
+  } catch(e) { console.error('loadDashboard error:', e); }
 }
 
 // ============================================================
