@@ -839,17 +839,18 @@
       <div class="amount-info">
         <div class="amount-info-item">
           <div class="amount-info-label">🚗 日帰り</div>
-          <div class="amount-info-value">¥1,500 / 日</div>
+          <div class="amount-info-value" style="font-size:13px">¥1,500 × 日数</div>
         </div>
         <div class="amount-info-item">
           <div class="amount-info-label">🏨 宿泊</div>
-          <div class="amount-info-value">¥3,000 / 泊</div>
+          <div class="amount-info-value" style="font-size:12px">¥1,500 ＋ ¥3,000 × 泊数</div>
         </div>
         <div class="amount-info-item">
           <div class="amount-info-label">🌙 夜勤</div>
-          <div class="amount-info-value">¥3,000 / 日</div>
+          <div class="amount-info-value" style="font-size:13px">¥3,000 × 日数</div>
         </div>
       </div>
+      <div id="amountBreakdown" style="display:none;background:rgba(181,96,26,.08);border:1px solid rgba(181,96,26,.2);border-radius:6px;padding:8px 14px;font-size:13px;color:var(--accent);font-weight:600;margin-bottom:12px;text-align:center"></div>
       <div class="form-grid">
         <div class="form-group">
           <label>事業所 *</label>
@@ -938,7 +939,7 @@
             <tr>
               <th>氏名</th>
               <th>事業所</th>
-              <th>支給金額</th>
+              <th>支給金額（自動）</th>
               <th>返還</th>
               <th></th>
             </tr>
@@ -1422,19 +1423,20 @@ function toggleCalendar() {
     const now = new Date();
     calYear = now.getFullYear();
     calMonth = now.getMonth();
-    if (!calStartDate) { calStep = 0; }
+    calStep = calStartDate ? calStep : 0;
     renderCalendar();
-    positionCalendar();
     popup.classList.add('open');
+    positionCalendar();
   }
 }
 
 function positionCalendar() {
   const display = document.getElementById('dateRangeDisplay');
-  const popup = document.getElementById('calendarPopup');
-  const rect = display.getBoundingClientRect();
-  popup.style.top = (rect.bottom + 6) + 'px';
-  popup.style.left = rect.left + 'px';
+  const popup   = document.getElementById('calendarPopup');
+  const dr = display.getBoundingClientRect();
+  const pr = popup.getBoundingClientRect();
+  popup.style.top  = (dr.top - pr.height - 8) + 'px';
+  popup.style.left = dr.left + 'px';
 }
 
 function prevMonth() { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); }
@@ -1447,9 +1449,10 @@ function renderCalendar() {
     hint.textContent = 'まず出張タイプを選択してください';
     hint.style.color = 'var(--amber)';
   } else {
-    const msgs = { day_trip: '①開始日 ②終了日 の順にクリック（1日のみの場合は同じ日を2回）', overnight: '①出発日 ②帰着日 の順にクリック', night_shift: '①開始日 ②終了日 の順にクリック' };
-    hint.textContent = (calStep === 1 && calStartDate) ? '✅ 開始日選択済 → 終了日をクリック' : msgs[travelType] || '';
-    hint.style.color = (calStep === 1 && calStartDate) ? 'var(--accent)' : 'var(--text3)';
+    hint.textContent = calStep === 1
+      ? '✅ 開始日選択済 → 終了日をクリック'
+      : '① 開始日 → ② 終了日 の順にクリック';
+    hint.style.color = calStep === 1 ? 'var(--accent)' : 'var(--text3)';
   }
 
   const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
@@ -1459,74 +1462,55 @@ function renderCalendar() {
   const dayNames = ['日','月','火','水','木','金','土'];
   let html = dayNames.map(d => `<div class="cal-day-name">${d}</div>`).join('');
 
-  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const firstDay   = new Date(calYear, calMonth, 1).getDay();
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  const today = new Date();
-  today.setHours(0,0,0,0);
 
-  // 範囲ハイライト用: 確定済みendまたはホバー中のendを使う
-  const dsTime = calStartDate ? new Date(calStartDate).getTime() : null;
-  const deTime = calEndDate ? new Date(calEndDate).getTime()
-                 : (calHover ? new Date(calHover).getTime() : null);
+  const todayStr = (() => {
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  })();
+
+  // ホバー中の仮endか確定endを使って範囲を決める
+  const s = calStartDate || null;
+  const e = calEndDate || calHover || null;
+  const lo = s && e ? (s < e ? s : e) : s;
+  const hi = s && e ? (s < e ? e : s) : s;
 
   for (let i = 0; i < firstDay; i++) html += `<div class="cal-day empty"></div>`;
 
   for (let d = 1; d <= daysInMonth; d++) {
-    const date = new Date(calYear, calMonth, d);
-    date.setHours(0,0,0,0);
-    const t = date.getTime();
-    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const ds = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     let cls = 'cal-day';
-
-    if (t === today.getTime()) cls += ' today';
-
-    if (dsTime && deTime) {
-      const lo = Math.min(dsTime, deTime);
-      const hi = Math.max(dsTime, deTime);
-      if (t === lo && t === hi) cls += ' start end';
-      else if (t === lo) cls += ' start';
-      else if (t === hi) cls += ' end';
-      else if (t > lo && t < hi) cls += ' in-range';
-    } else if (dsTime && t === dsTime) {
+    if (ds === todayStr)   cls += ' today';
+    if (lo && hi) {
+      if (ds === lo && ds === hi) cls += ' start end';
+      else if (ds === lo)         cls += ' start';
+      else if (ds === hi)         cls += ' end';
+      else if (ds > lo && ds < hi) cls += ' in-range';
+    } else if (lo && ds === lo) {
       cls += ' start end';
     }
-
-    html += `<div class="${cls}" onclick="onDayClick('${dateStr}')" onmouseenter="onDayHover('${dateStr}')">${d}</div>`;
+    html += `<div class="${cls}" onclick="calClick('${ds}')" onmouseenter="calHoverFn('${ds}')">${d}</div>`;
   }
-
   grid.innerHTML = html;
 }
 
-function onDayClick(dateStr) {
+function calClick(ds) {
   const travelType = document.getElementById('fTravelType').value;
   if (!travelType) { toast('先に出張タイプを選択してください', 'info'); return; }
-
-  if (calStep === 0 || !calStartDate) {
-    // 1クリック目: 開始日セット
-    calStartDate = dateStr;
-    calEndDate = null;
-    calHover = null;
-    calStep = 1;
+  if (calStep === 0) {
+    calStartDate = ds; calEndDate = null; calHover = null; calStep = 1;
   } else {
-    // 2クリック目: 終了日セット（前後入れ替え対応）
-    if (dateStr < calStartDate) {
-      calEndDate = calStartDate;
-      calStartDate = dateStr;
-    } else {
-      calEndDate = dateStr;
-    }
-    calHover = null;
-    calStep = 0;
+    if (ds < calStartDate) { calEndDate = calStartDate; calStartDate = ds; }
+    else                   { calEndDate = ds; }
+    calHover = null; calStep = 0;
   }
   renderCalendar();
   if (calStartDate && calEndDate) { updateDateDisplay(); updateAmounts(); }
 }
 
-function onDayHover(dateStr) {
-  if (calStep === 1 && calStartDate) {
-    calHover = dateStr;
-    renderCalendar();
-  }
+function calHoverFn(ds) {
+  if (calStep === 1 && calStartDate) { calHover = ds; renderCalendar(); }
 }
 
 function clearCalendar() {
@@ -1538,10 +1522,16 @@ function clearCalendar() {
 function applyCalendar() {
   if (!calStartDate) { toast('日付を選択してください', 'error'); return; }
   if (!calEndDate) calEndDate = calStartDate;
-  calStep = 0;
+  calHover = null; calStep = 0;
   document.getElementById('calendarPopup').classList.remove('open');
   updateDateDisplay();
   updateAmounts();
+}
+
+function fmtDate(ds) {
+  if (!ds) return '';
+  const [y, m, d] = ds.split('-');
+  return `${y}年${parseInt(m)}月${parseInt(d)}日`;
 }
 
 function updateDateDisplay() {
@@ -1549,14 +1539,14 @@ function updateDateDisplay() {
   const text = document.getElementById('dateRangeText');
   if (calStartDate) {
     const end = calEndDate || calStartDate;
+    const days = Math.floor((new Date(end) - new Date(calStartDate)) / 86400000) + 1;
+    const nights = days - 1;
+    const travelType = document.getElementById('fTravelType').value;
     if (calStartDate === end) {
-      text.textContent = calStartDate;
+      text.textContent = fmtDate(calStartDate);
     } else {
-      const days = Math.floor((new Date(end) - new Date(calStartDate)) / 86400000) + 1;
-      const nights = days - 1;
-      const travelType = document.getElementById('fTravelType').value;
       const info = travelType === 'overnight' ? `（${nights}泊${days}日）` : `（${days}日間）`;
-      text.textContent = `${calStartDate} 〜 ${end} ${info}`;
+      text.textContent = `${fmtDate(calStartDate)}  〜  ${fmtDate(end)}  ${info}`;
     }
     display.classList.remove('placeholder');
     display.classList.add('has-value');
@@ -1580,14 +1570,27 @@ document.addEventListener('click', (e) => {
 // ============================================================
 function calculateAmount(travelType, startDate, endDate) {
   if (!startDate || !endDate) return 0;
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const days = Math.floor((end - start) / 86400000) + 1;
+  const days = Math.floor((new Date(endDate) - new Date(startDate)) / 86400000) + 1;
   const nights = Math.max(days - 1, 1);
-  if (travelType === 'day_trip') return days * 1500;
-  if (travelType === 'overnight') return nights * 3000;
+  if (travelType === 'day_trip')   return days * 1500;
+  if (travelType === 'overnight')  return 1500 + nights * 3000;  // 1500 + 泊数×3000
   if (travelType === 'night_shift') return days * 3000;
   return 0;
+}
+
+// 金額の内訳テキストを返す
+function calcBreakdown(travelType, startDate, endDate) {
+  if (!startDate || !endDate || !travelType) return '';
+  const days = Math.floor((new Date(endDate) - new Date(startDate)) / 86400000) + 1;
+  const nights = Math.max(days - 1, 1);
+  const amt = calculateAmount(travelType, startDate, endDate);
+  if (travelType === 'day_trip')
+    return `¥1,500 × ${days}日 ＝ ¥${amt.toLocaleString()}`;
+  if (travelType === 'overnight')
+    return `¥1,500 ＋ ¥3,000 × ${nights}泊 ＝ ¥${amt.toLocaleString()}`;
+  if (travelType === 'night_shift')
+    return `¥3,000 × ${days}日 ＝ ¥${amt.toLocaleString()}`;
+  return '';
 }
 
 function updateAmounts() {
@@ -1595,7 +1598,15 @@ function updateAmounts() {
   const start = calStartDate;
   const end = calEndDate || calStartDate;
   const amount = calculateAmount(travelType, start, end);
-  
+
+  // 内訳表示
+  const bdEl = document.getElementById('amountBreakdown');
+  if (bdEl) {
+    const bd = calcBreakdown(travelType, start, end);
+    if (bd) { bdEl.textContent = '1人あたり ' + bd; bdEl.style.display = 'block'; }
+    else    { bdEl.style.display = 'none'; }
+  }
+
   const rows = document.querySelectorAll('#membersBody tr');
   rows.forEach(row => {
     const amountInput = row.querySelector('.member-amount');
@@ -1739,10 +1750,8 @@ function addMemberRow(name = '', amount = 0, isRefunded = false, detId = null, o
     </td>
     <td style="white-space:nowrap;font-size:12px;color:var(--text2)" class="member-office-cell">${empOffice}</td>
     <td>
-      <div style="display:flex;align-items:center;gap:6px">
-        <input class="member-amount" type="number" value="${amount}" style="width:90px;padding:5px 8px;font-size:12px" oninput="updateAmountDisplay(this)" />
-        <span class="amount-display" style="font-size:12px;color:var(--green);font-weight:600">¥${amount.toLocaleString()}</span>
-      </div>
+      <input class="member-amount" type="hidden" value="${amount}" />
+      <span class="amount-display" style="font-size:13px;color:var(--green);font-weight:700;font-family:var(--mono)">¥${amount.toLocaleString()}</span>
     </td>
     <td>
       ${isRefunded ? '<span class="badge badge-refunded" style="font-size:10px">返還済</span>' : '<span style="color:var(--text3);font-size:11px">—</span>'}
@@ -2091,11 +2100,16 @@ function togglePayCal() {
     const now = new Date();
     payCalYear = now.getFullYear();
     payCalMonth = now.getMonth();
+    // 位置設定（上に表示）
     renderPayCal();
-    // 位置設定
     const display = document.getElementById('payDateDisplay');
     const rect = display.getBoundingClientRect();
-    popup.style.top = (rect.bottom + 6) + 'px';
+    popup.style.visibility = 'hidden';
+    popup.style.display = 'block';
+    const popH = popup.offsetHeight;
+    popup.style.display = '';
+    popup.style.visibility = '';
+    popup.style.top = (rect.top + window.scrollY - popH - 8) + 'px';
     popup.style.left = rect.left + 'px';
     popup.classList.add('open');
   }
