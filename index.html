@@ -922,13 +922,21 @@
           <label>支給日</label>
           <input type="date" id="fPaymentDate" />
         </div>
-        <div class="form-group">
-          <label>出張開始日 *</label>
-          <input type="date" id="calStartInput" onchange="onDateInputChange()" />
-        </div>
-        <div class="form-group">
-          <label>出張終了日 *</label>
-          <input type="date" id="calEndInput" onchange="onDateInputChange()" />
+        <div class="form-group full">
+          <label>出張期間 *</label>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:6px;overflow:hidden">
+              <button type="button" onclick="shiftDate('calStartInput',-1)" style="padding:7px 10px;background:var(--surface2);border:none;border-right:1px solid var(--border);cursor:pointer;color:var(--text2);font-size:14px;line-height:1">◀</button>
+              <input type="date" id="calStartInput" onchange="onDateInputChange()" style="border:none;background:transparent;padding:7px 8px;font-size:13px;color:var(--text);outline:none;width:140px" />
+              <button type="button" onclick="shiftDate('calStartInput',1)" style="padding:7px 10px;background:var(--surface2);border:none;border-left:1px solid var(--border);cursor:pointer;color:var(--text2);font-size:14px;line-height:1">▶</button>
+            </div>
+            <span style="color:var(--text3);font-size:13px">〜</span>
+            <div style="display:flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:6px;overflow:hidden">
+              <button type="button" onclick="shiftDate('calEndInput',-1)" style="padding:7px 10px;background:var(--surface2);border:none;border-right:1px solid var(--border);cursor:pointer;color:var(--text2);font-size:14px;line-height:1">◀</button>
+              <input type="date" id="calEndInput" onchange="onDateInputChange()" style="border:none;background:transparent;padding:7px 8px;font-size:13px;color:var(--text);outline:none;width:140px" />
+              <button type="button" onclick="shiftDate('calEndInput',1)" style="padding:7px 10px;background:var(--surface2);border:none;border-left:1px solid var(--border);cursor:pointer;color:var(--text2);font-size:14px;line-height:1">▶</button>
+            </div>
+          </div>
         </div>
         <div class="form-group full" id="amountBreakdownRow" style="display:none">
           <div id="amountBreakdown" style="background:rgba(181,96,26,.08);border:1px solid rgba(181,96,26,.2);border-radius:6px;padding:8px 14px;font-size:13px;color:var(--accent);font-weight:600;text-align:center"></div>
@@ -1668,7 +1676,7 @@ function calcBreakdown(travelType, startDate, endDate) {
 function updateAmounts() {
   const travelType = document.getElementById('fTravelType').value;
   const start = calStartDate;
-  const end   = calEndDate || calStartDate; // 単日選択は同日=0泊扱い
+  const end   = calEndDate || calStartDate;
   if (!travelType || !start) return;
   const amount = calculateAmount(travelType, start, end);
 
@@ -1683,12 +1691,13 @@ function updateAmounts() {
     if (bdRow) bdRow.style.display = 'none';
   }
 
-  const rows = document.querySelectorAll('#membersBody tr');
-  rows.forEach(row => {
-    const amountInput = row.querySelector('.member-amount');
-    const amountDisplay = row.querySelector('.amount-display');
-    if (amountInput) amountInput.value = amount;
-    if (amountDisplay) amountDisplay.textContent = `¥${amount.toLocaleString()}`;
+  // 全メンバー行の金額を更新（返還済み行は除く）
+  document.querySelectorAll('#membersBody tr').forEach(function(row) {
+    if (row.querySelector('.badge-refunded')) return; // 返還済みはスキップ
+    const inp = row.querySelector('.member-amount');
+    const disp = row.querySelector('.amount-display');
+    if (inp)  inp.value = amount;
+    if (disp) disp.textContent = '¥' + amount.toLocaleString();
   });
   updateTotal();
 }
@@ -1781,6 +1790,20 @@ function onOfficeChange() {
 }
 
 function onTravelTypeChange() {
+  onDateInputChange();
+}
+
+function shiftDate(inputId, delta) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  if (!el.value) {
+    const t = new Date();
+    el.value = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
+  } else {
+    const [y,m,d] = el.value.split('-').map(Number);
+    const dt = new Date(y, m-1, d + delta);
+    el.value = dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+  }
   onDateInputChange();
 }
 
