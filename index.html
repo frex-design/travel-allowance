@@ -1855,7 +1855,7 @@ async function saveRequest() {
 // EMPLOYEES
 // ============================================================
 async function loadEmployeesData() {
-  const res = await sbGet('employees?select=*&order=name.asc');
+  const res = await sbGet('employees?select=*&order=sort_order.asc,name.asc');
   if (res.data) employees = res.data;
 }
 
@@ -1870,6 +1870,7 @@ async function loadEmployees() {
     <table style="width:100%;border-collapse:collapse">
       <thead>
         <tr style="background:var(--surface2)">
+          <th style="padding:9px 10px;font-size:11px;font-weight:600;color:var(--text3);text-align:center;width:60px;letter-spacing:.5px">順番</th>
           <th style="padding:9px 14px;font-size:11px;font-weight:600;color:var(--text3);text-align:left;letter-spacing:.5px">氏名</th>
           <th style="padding:9px 14px;font-size:11px;font-weight:600;color:var(--text3);text-align:left;letter-spacing:.5px">事業所 / 部署</th>
           <th style="padding:9px 14px;font-size:11px;font-weight:600;color:var(--text3);text-align:left;letter-spacing:.5px">状態</th>
@@ -1877,8 +1878,14 @@ async function loadEmployees() {
         </tr>
       </thead>
       <tbody>
-        ${employees.map(e => `
+        ${employees.map((e, i) => `
           <tr style="border-top:1px solid var(--border);${!e.is_active ? 'opacity:.5' : ''}">
+            <td style="padding:8px 10px;text-align:center">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+                <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:13px;line-height:1" onclick="moveEmployee(${i}, -1)" ${i === 0 ? 'disabled style="opacity:.3;cursor:default"' : ''}>▲</button>
+                <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:13px;line-height:1" onclick="moveEmployee(${i}, 1)" ${i === employees.length-1 ? 'disabled style="opacity:.3;cursor:default"' : ''}>▼</button>
+              </div>
+            </td>
             <td style="padding:10px 14px;font-weight:500">👤 ${e.name}</td>
             <td style="padding:10px 14px;color:var(--text2);font-size:13px">${e.department || '—'}</td>
             <td style="padding:10px 14px">
@@ -1946,6 +1953,29 @@ async function saveEmployee() {
 
 async function toggleEmployee(id, isActive) {
   await sbPatch(`employees?id=eq.${id}`, { is_active: !isActive });
+  loadEmployees();
+}
+
+async function moveEmployee(index, direction) {
+  const newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= employees.length) return;
+
+  // swap
+  const a = employees[index];
+  const b = employees[newIndex];
+
+  // sort_order を入れ替え（nullの場合は現在のindexをベースに）
+  const orderA = a.sort_order ?? index;
+  const orderB = b.sort_order ?? newIndex;
+
+  await Promise.all([
+    sbPatch(`employees?id=eq.${a.id}`, { sort_order: orderB }),
+    sbPatch(`employees?id=eq.${b.id}`, { sort_order: orderA }),
+  ]);
+
+  // ローカルも即反映（再取得より速い）
+  employees[index] = { ...b, sort_order: orderA };
+  employees[newIndex] = { ...a, sort_order: orderB };
   loadEmployees();
 }
 
