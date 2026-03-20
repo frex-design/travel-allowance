@@ -1706,26 +1706,31 @@ function updateTotal() {
 // ============================================================
 // MODAL: NEW / EDIT REQUEST
 // ============================================================
-function openNewRequest() {
+async function openNewRequest() {
   editingId = null;
+  // まずモーダルを開く（populateSelects の完了を待たない）
+  openModal('requestModal');
   document.getElementById('requestModalTitle').textContent = '出張手当 新規登録';
-  document.getElementById('fOffice').value = '';
-  document.getElementById('fTaskId').value = '';
-  document.getElementById('fTaskName').value = '';
-  document.getElementById('fTravelType').value = '';
-  document.getElementById('fPaymentDate').value = '';
-  document.getElementById('fNotes').value = '';
+  // フォームリセット
+  ['fOffice','fTaskId','fTaskName','fTravelType','fPaymentDate','fNotes'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
   calStartDate = null; calEndDate = null; calHover = null; calStep = 0;
   const si = document.getElementById('calStartInput');
   const ei = document.getElementById('calEndInput');
   if (si) si.value = '';
   if (ei) ei.value = '';
-  updateDateDisplay();
+  const bdRow = document.getElementById('amountBreakdownRow');
+  if (bdRow) bdRow.style.display = 'none';
   document.getElementById('membersBody').innerHTML = '';
   document.getElementById('totalAmountDisplay').textContent = '¥0';
-  populateSelects();
+  try {
+    await populateSelects();
+  } catch(e) {
+    console.warn('populateSelects error:', e);
+  }
   addMemberRow();
-  openModal('requestModal');
 }
 
 async function editRequest(id) {
