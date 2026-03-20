@@ -1385,10 +1385,34 @@ function showTodayDetail(office) {
     const btn = document.createElement('button');
     btn.style.cssText = 'padding:4px 10px;background:var(--accent);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600';
     btn.textContent = '\u8a73\u7d30';
-    (function(id){ btn.onclick = function(){ openDetailFromToday(id); }; })(r.id);
+    (function(id){ btn.onclick = function(e){ e.stopPropagation(); openDetailFromToday(id); }; })(r.id);
 
     right.appendChild(amtEl);
     right.appendChild(btn);
+
+    // 未支給の場合のみ「支給済にする」ボタンを表示
+    if (r.status === 'pending') {
+      var paidBtn = document.createElement('button');
+      paidBtn.style.cssText = 'padding:4px 10px;background:#3a7d44;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600';
+      paidBtn.textContent = '\u2705 \u652f\u7d66\u6e08';
+      (function(reqId, cardEl){
+        paidBtn.onclick = function(e) {
+          e.stopPropagation();
+          if (!confirm('\u652f\u7d66\u6e08\u306b\u5909\u66f4\u3057\u307e\u3059\u304b\uff1f')) return;
+          updateStatus(reqId, 'paid').then(function() {
+            toast('\u652f\u7d66\u6e08\u306b\u5909\u66f4\u3057\u307e\u3057\u305f', 'success');
+            closeModal('todayDetailModal');
+            loadDashboard();
+          });
+        };
+      })(r.id, card);
+      right.appendChild(paidBtn);
+    } else if (r.status === 'paid') {
+      var paidBadge = document.createElement('span');
+      paidBadge.style.cssText = 'padding:4px 10px;background:rgba(58,125,68,.15);color:#2d6235;border-radius:5px;font-size:11px;font-weight:600';
+      paidBadge.textContent = '\u652f\u7d66\u6e08';
+      right.appendChild(paidBadge);
+    }
     hdr.appendChild(info);
     hdr.appendChild(right);
     card.appendChild(hdr);
@@ -1678,7 +1702,7 @@ async function showDetail(id) {
   let btns = `<button class="btn btn-ghost" onclick="closeModal('detailModal')">閉じる</button>
     <button class="btn btn-ghost" onclick="editRequest('${r.id}');closeModal('detailModal')">✏️ 編集</button>`;
   if (r.status === 'pending') {
-    btns += `<button class="btn btn-success" onclick="updateStatus('${r.id}','paid')">✅ 支給済にする</button>`;
+    btns += `<button class="btn btn-success" onclick="updateStatus('${r.id}','paid')">✅ 支給済</button>`;
   }
   if (r.status === 'paid') {
     btns += `<button class="btn btn-danger" onclick="updateStatus('${r.id}','cancelled')">❌ キャンセル</button>`;
