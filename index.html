@@ -1218,10 +1218,10 @@ async function loadDashboard() {
   const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 
   try {
-    const [reqRes, detRes] = await Promise.all([
+    var _pAll = await Promise.all([
       sbGet('travel_requests?select=*&order=created_at.desc'),
       sbGet('travel_allowance_details?select=*')
-    ]);
+    ]); var reqRes=_pAll[0], detRes=_pAll[1];
     if (reqRes.data) allRequests = reqRes.data;
     if (detRes.data) allDetails = detRes.data;
 
@@ -1307,7 +1307,7 @@ function renderTodayWidget() {
   document.getElementById('today-yokote-count').textContent  = yokote.count + ' 名';
   document.getElementById('today-total-amount').textContent  = fmt(all.total);
 
-  const [y,m,d] = today.split('-');
+  var _ymd = today.split('-'); var y=_ymd[0], m=_ymd[1], d=_ymd[2];
   document.getElementById('today-date-label').textContent =
     y + '年' + parseInt(m) + '月' + parseInt(d) + '日 時点';
 }
@@ -1506,7 +1506,7 @@ function renderTaskSummary(reqs) {
 // REQUESTS LIST
 // ============================================================
 async function loadRequests() {
-  const [reqRes, detRes] = await Promise.all([
+  var _pAll = await Promise.all([
     sbGet('travel_requests?select=*&order=created_at.desc'),
     sbGet('travel_allowance_details?select=*')
   ]);
@@ -1566,7 +1566,7 @@ function renderRequestsTable(tableId, reqs, simple) {
     const typeBadge = { day_trip:'badge-day', overnight:'badge-overnight', night_shift:'badge-night' }[r.travel_type] || '';
     const period = r.start_date === r.end_date ? r.start_date : `${r.start_date} 〜 ${r.end_date}`;
     const statusMap = { pending: ['badge-pending','未支給'], paid: ['badge-paid','支給済'], cancelled: ['badge-cancelled','キャンセル'], refunded: ['badge-refunded','返還済'] };
-    const [sc, sl] = statusMap[r.status] || ['',''];
+    var _ss = statusMap[r.status] || ['','']; var sc=_ss[0], sl=_ss[1];
     const refundNote = refunded > 0 ? `<div style="font-size:11px;color:var(--red);margin-top:2px">返還 ¥${refunded.toLocaleString()}</div>` : '';
     
     const officeBadge = r.office === '秋田事業所'
@@ -1614,7 +1614,7 @@ async function showDetail(id) {
   const refunded = dets.filter(function(d) { return d.is_refunded; }).reduce(function(s, d) { return s + d.allowance_amount; }, 0);
   const typeLabel = { day_trip:'🚗 日帰り', overnight:'🏨 宿泊', night_shift:'🌙 夜勤' }[r.travel_type] || r.travel_type;
   const statusMap = { pending: ['badge-pending','未支給'], paid: ['badge-paid','支給済'], cancelled: ['badge-cancelled','キャンセル'], refunded: ['badge-refunded','返還済'] };
-  const [sc, sl] = statusMap[r.status] || ['',''];
+  var _ss = statusMap[r.status] || ['','']; var sc=_ss[0], sl=_ss[1];
 
   document.getElementById('detailBody').innerHTML = `
     <div class="detail-grid">
@@ -1720,8 +1720,8 @@ async function updateStatus(id, status) {
 // ============================================================
 // 日付文字列 "YYYY-MM-DD" から日数差を返す（タイムゾーン無関係）
 function dateDiffDays(a, b) {
-  const [ay,am,ad] = a.split('-').map(Number);
-  const [by,bm,bd] = b.split('-').map(Number);
+  var _a = a.split('-').map(Number); var ay=_a[0], am=_a[1], ad=_a[2];
+  var _b = b.split('-').map(Number); var by=_b[0], bm=_b[1], bd=_b[2];
   const da = Date.UTC(ay,am-1,ad);
   const db = Date.UTC(by,bm-1,bd);
   return Math.round((db - da) / 86400000);
@@ -2188,7 +2188,7 @@ async function saveRequest() {
   }
 
   // Upsert members
-  for (const m of members) {
+  members.forEach(function(m) {
     const detData = {
       request_id: reqId,
       employee_name: m.name,
@@ -2200,7 +2200,7 @@ async function saveRequest() {
     } else {
       await sbPost('travel_allowance_details', detData);
     }
-  }
+  });
 
   toast(editingId ? '更新しました ✅' : '登録しました ✅', 'success');
   closeModal('requestModal');
