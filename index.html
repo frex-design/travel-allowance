@@ -1212,6 +1212,16 @@ async function loadDashboard() {
       return s + dets.reduce((a, d) => a + (d.allowance_amount || 0), 0);
     }, 0);
 
+    // デバッグ情報をコンソールに出力
+    console.log('=== ダッシュボード集計デバッグ ===');
+    console.log('今月:', month);
+    console.log('全件数:', allRequests.length, '件');
+    console.log('ステータス一覧:', allRequests.map(r => r.status));
+    console.log('今月対象件数:', monthlyReqs.length, '件');
+    console.log('明細件数:', allDetails.length, '件');
+    console.log('明細サンプル:', allDetails.slice(0,3));
+    console.log('今月合計:', monthlyTotal);
+
     const paidCount    = officeReqs.filter(r => r.status === 'paid').length;
     const pendingCount = officeReqs.filter(r => r.status === 'pending').length;
     const officeIds    = officeReqs.map(r => r.id);
