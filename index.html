@@ -1493,119 +1493,130 @@ async function updateStatus(id, status) {
 }
 
 // ============================================================
-// CALENDAR
+// CALENDAR — シンプル直接onclick方式
 // ============================================================
 function toggleCalendar() {
   const popup = document.getElementById('calendarPopup');
   if (popup.classList.contains('open')) {
     popup.classList.remove('open');
-  } else {
-    const now = new Date();
-    calYear = now.getFullYear();
-    calMonth = now.getMonth();
-    calStep = calStartDate ? calStep : 0;
-
-    // グリッドのイベントをここで一度だけ登録
-    const grid = document.getElementById('calGrid');
-    if (!grid._calReady) {
-      grid.addEventListener('click', function(ev) {
-        const cell = ev.target.closest('[data-date]');
-        if (!cell) return;
-        const ds = cell.dataset.date;
-        const tt = document.getElementById('fTravelType').value;
-        if (!tt) { toast('先に出張タイプを選択してください', 'info'); return; }
-        if (calStep === 0) {
-          calStartDate = ds; calEndDate = null; calHover = null; calStep = 1;
-        } else {
-          if (ds < calStartDate) { calEndDate = calStartDate; calStartDate = ds; }
-          else                   { calEndDate = ds; }
-          calHover = null; calStep = 0;
-        }
-        renderCalendar();
-        if (calStartDate && calEndDate) { updateDateDisplay(); updateAmounts(); }
-      });
-      grid.addEventListener('mouseover', function(ev) {
-        const cell = ev.target.closest('[data-date]');
-        if (!cell) return;
-        if (calStep === 1 && calStartDate) {
-          calHover = cell.dataset.date;
-          renderCalendar();
-        }
-      });
-      grid._calReady = true;
-    }
-
-    renderCalendar();
-    popup.classList.add('open');
-    positionCalendar();
+    return;
   }
-}
-
-function positionCalendar() {
-  const display = document.getElementById('dateRangeDisplay');
-  const popup   = document.getElementById('calendarPopup');
-  const dr = display.getBoundingClientRect();
-  const pr = popup.getBoundingClientRect();
+  const now = new Date();
+  calYear  = now.getFullYear();
+  calMonth = now.getMonth();
+  if (!calStartDate) calStep = 0;
+  drawCal();
+  popup.classList.add('open');
+  // 上に表示
+  const disp = document.getElementById('dateRangeDisplay');
+  const dr   = disp.getBoundingClientRect();
+  const pr   = popup.getBoundingClientRect();
   popup.style.top  = (dr.top - pr.height - 8) + 'px';
   popup.style.left = dr.left + 'px';
 }
 
-function prevMonth() { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); }
-function nextMonth() { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderCalendar(); }
+function prevMonth() { calMonth--; if (calMonth < 0) { calMonth=11; calYear--; } drawCal(); }
+function nextMonth() { calMonth++; if (calMonth > 11) { calMonth=0;  calYear++; } drawCal(); }
 
-function renderCalendar() {
+function drawCal() {
+  // ヒントテキスト
   const travelType = document.getElementById('fTravelType').value;
   const hint = document.getElementById('calTypeHint');
   if (!travelType) {
     hint.textContent = 'まず出張タイプを選択してください';
     hint.style.color = 'var(--amber)';
+  } else if (calStep === 1) {
+    hint.textContent = '✅ 開始日選択済 → 終了日をクリック';
+    hint.style.color = 'var(--accent)';
   } else {
-    hint.textContent = calStep === 1
-      ? '✅ 開始日選択済 → 終了日をクリック'
-      : '① 開始日 → ② 終了日 の順にクリック';
-    hint.style.color = calStep === 1 ? 'var(--accent)' : 'var(--text3)';
+    hint.textContent = '① 開始日 → ② 終了日 の順にクリック';
+    hint.style.color = 'var(--text3)';
   }
 
-  const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-  document.getElementById('calMonthYear').textContent = `${calYear}年 ${months[calMonth]}`;
+  // 月ヘッダー
+  const mNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  document.getElementById('calMonthYear').textContent = calYear + '年 ' + mNames[calMonth];
 
-  const grid = document.getElementById('calGrid');
+  // 今日
+  const td = new Date();
+  const todayStr = td.getFullYear() + '-' +
+    String(td.getMonth()+1).padStart(2,'0') + '-' +
+    String(td.getDate()).padStart(2,'0');
 
-  const dayNames = ['日','月','火','水','木','金','土'];
-  let html = dayNames.map(d => `<div class="cal-day-name">${d}</div>`).join('');
+  // 範囲ハイライト計算
+  const lo = calStartDate && (calEndDate || calHover)
+    ? [calStartDate, calEndDate || calHover].sort()[0] : calStartDate;
+  const hi = calStartDate && (calEndDate || calHover)
+    ? [calStartDate, calEndDate || calHover].sort()[1] : calStartDate;
 
   const firstDay    = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  const t = new Date();
-  const todayStr = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
 
-  const s  = calStartDate || null;
-  const e  = calEndDate || calHover || null;
-  const lo = s && e ? (s < e ? s : e) : s;
-  const hi = s && e ? (s < e ? e : s) : s;
+  const dayNames = ['日','月','火','水','木','金','土'];
+  let html = dayNames.map(function(n){ return '<div class="cal-day-name">'+n+'</div>'; }).join('');
 
-  for (let i = 0; i < firstDay; i++) html += `<div class="cal-day empty"></div>`;
+  for (let i = 0; i < firstDay; i++) html += '<div class="cal-day empty"></div>';
 
   for (let d = 1; d <= daysInMonth; d++) {
-    const ds = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const ds = calYear + '-' +
+      String(calMonth+1).padStart(2,'0') + '-' +
+      String(d).padStart(2,'0');
+
     let cls = 'cal-day';
     if (ds === todayStr) cls += ' today';
-    if (lo && hi) {
-      if      (ds === lo && ds === hi) cls += ' start end';
-      else if (ds === lo)              cls += ' start';
-      else if (ds === hi)              cls += ' end';
-      else if (ds > lo && ds < hi)    cls += ' in-range';
+
+    if (lo && hi && lo !== hi) {
+      if      (ds === lo)          cls += ' start';
+      else if (ds === hi)          cls += ' end';
+      else if (ds > lo && ds < hi) cls += ' in-range';
     } else if (lo && ds === lo) {
       cls += ' start end';
     }
-    html += `<div class="${cls}" data-date="${ds}">${d}</div>`;
+
+    html += '<div class="' + cls + '" onclick="calDayClick(this)" onmouseenter="calDayHover(this)" data-ds="' + ds + '">' + d + '</div>';
   }
-  grid.innerHTML = html;
+
+  document.getElementById('calGrid').innerHTML = html;
+}
+
+function calDayClick(el) {
+  const ds = el.dataset.ds;
+  const tt = document.getElementById('fTravelType').value;
+  if (!tt) { toast('先に出張タイプを選択してください', 'info'); return; }
+
+  if (calStep === 0) {
+    calStartDate = ds;
+    calEndDate   = null;
+    calHover     = null;
+    calStep      = 1;
+  } else {
+    if (ds < calStartDate) {
+      calEndDate   = calStartDate;
+      calStartDate = ds;
+    } else {
+      calEndDate = ds;
+    }
+    calHover = null;
+    calStep  = 0;
+  }
+  drawCal();
+  if (calStartDate && calEndDate) {
+    updateDateDisplay();
+    updateAmounts();
+  }
+}
+
+function calDayHover(el) {
+  const ds = el.dataset.ds;
+  if (calStep === 1 && calStartDate) {
+    calHover = ds;
+    drawCal();
+  }
 }
 
 function clearCalendar() {
   calStartDate = null; calEndDate = null; calHover = null; calStep = 0;
-  renderCalendar();
+  drawCal();
   updateDateDisplay();
 }
 
@@ -1617,6 +1628,10 @@ function applyCalendar() {
   updateDateDisplay();
   updateAmounts();
 }
+
+// renderCalendar は後方互換のために drawCal へ委譲
+function renderCalendar() { drawCal(); }
+
 
 function fmtDate(ds) {
   if (!ds) return '';
@@ -1807,7 +1822,17 @@ function onOfficeChange() {
 }
 
 function onTravelTypeChange() {
-  updateAmounts();
+  // 期間選択済みなら金額を再計算、未選択なら内訳表示をリセット
+  if (calStartDate) {
+    updateAmounts();
+  } else {
+    const bdEl = document.getElementById('amountBreakdown');
+    if (bdEl) bdEl.style.display = 'none';
+    // メンバー行の表示もリセット
+    document.querySelectorAll('#membersBody .amount-display').forEach(el => {
+      el.textContent = '—';
+    });
+  }
 }
 
 async function populateSelects() {
