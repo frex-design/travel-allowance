@@ -611,7 +611,7 @@
 <body>
 
 <!-- ===== CONFIG ===== -->
-<div id="configOverlay" class="modal-overlay open" style="z-index:10000">
+<div id="configOverlay" class="modal-overlay" style="z-index:10000;display:flex">
   <div class="modal" style="max-width:500px">
     <div class="modal-header">
       <div class="modal-title">⚙️ Supabase 接続設定</div>
@@ -1070,23 +1070,22 @@ function saveConfig() {
   localStorage.setItem('supabase_url', SUPABASE_URL);
   localStorage.setItem('supabase_key', SUPABASE_KEY);
   closeModal('configOverlay');
-  document.getElementById('configOverlay').classList.remove('open');
   toast('接続設定を保存しました ✅', 'success');
   loadAll();
 }
 function skipConfig() {
-  document.getElementById('configOverlay').classList.remove('open');
+  document.getElementById('configOverlay').style.display = 'none';
 }
 function openConfig() {
   document.getElementById('cfgUrl').value = SUPABASE_URL;
   document.getElementById('cfgKey').value = SUPABASE_KEY;
-  document.getElementById('configOverlay').classList.add('open');
+  document.getElementById('configOverlay').style.display = 'flex';
 }
 
 // Auto-fill config on load
 window.addEventListener('DOMContentLoaded', () => {
   if (SUPABASE_URL && SUPABASE_KEY) {
-    document.getElementById('configOverlay').classList.remove('open');
+    document.getElementById('configOverlay').style.display = 'none';
     loadAll();
   } else {
     document.getElementById('cfgUrl').value = SUPABASE_URL;
@@ -2183,12 +2182,12 @@ async function toggleTask(id, isActive) {
 function openModal(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.classList.add('open');
+  el.style.display = 'flex';
 }
 function closeModal(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.classList.remove('open');
+  el.style.display = 'none';
 }
 </script>
 </body>
