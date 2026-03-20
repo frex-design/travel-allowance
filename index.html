@@ -1138,7 +1138,7 @@ async function sb(method, path, body) {
     const text = await res.text();
     const data = text ? JSON.parse(text) : null;
     if (!res.ok) {
-      const msg = data?.message || data?.error || JSON.stringify(data);
+      const msg = (data && data.message) || (data && data.error) || JSON.stringify(data);
       console.error('Supabase error:', res.status, msg);
       toast(`DB エラー (${res.status}): ${msg}`, 'error');
       return { data: null, error: data };
@@ -1547,15 +1547,15 @@ function filterStatus(status, btn) {
 }
 
 function applySearch() {
-  const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
+  const q = ((document.getElementById('searchInput') && document.getElementById('searchInput').value) || '').toLowerCase();
   let filtered = allRequests;
   if (currentOfficeReq !== 'all') filtered = filtered.filter(r => r.office === currentOfficeReq);
   if (currentStatus !== 'all') filtered = filtered.filter(r => r.status === currentStatus);
   if (q) {
     filtered = filtered.filter(r => {
-      const taskMatch = r.task_name?.toLowerCase().includes(q);
+      const taskMatch = (r.task_name && r.task_name.toLowerCase().includes(q));
       const memberMatch = allDetails.filter(d => d.request_id === r.id)
-        .some(d => d.employee_name?.toLowerCase().includes(q));
+        .some(d => (d.employee_name && d.employee_name.toLowerCase().includes(q)));
       return taskMatch || memberMatch;
     });
   }
@@ -1699,7 +1699,7 @@ async function showDetail(id) {
 }
 
 async function markRefund(detId, reqId) {
-  const reason = prompt('返還理由を入力してください（任意）') ?? '';
+  const reason = prompt('返還理由を入力してください（任意）') || '';
   const today = new Date().toISOString().split('T')[0];
   const res = await sbPatch(`travel_allowance_details?id=eq.${detId}`, {
     is_refunded: true, refund_date: today, refund_reason: reason
@@ -1890,7 +1890,7 @@ function onOfficeChange() {
   // 事業所が変わったらメンバーselectの選択肢を絞り込む
   document.querySelectorAll('#membersBody tr').forEach(row => {
     const sel = row.querySelector('.member-name');
-    const currentName = row.querySelector('.member-name-input')?.value || '';
+    const currentName = (row.querySelector('.member-name-input') && row.querySelector('.member-name-input').value) || '';
     if (sel) {
       const opts = getFilteredEmpOptions(currentName);
       sel.innerHTML = '<option value="">選択または入力</option>' + opts;
@@ -2072,7 +2072,7 @@ async function populateSelects() {
 
 let memberRowCount = 0;
 function getFilteredEmpOptions(selectedName) {
-  const office = document.getElementById('fOffice')?.value || '';
+  const office = (document.getElementById('fOffice') && document.getElementById('fOffice').value) || '';
   const filtered = employees.filter(e => e.is_active && (!office || e.department === office));
   return filtered.map(e => `<option value="${e.name}" ${e.name === selectedName ? 'selected' : ''}>${e.name}</option>`).join('');
 }
@@ -2087,7 +2087,7 @@ function addMemberRow(name, amount, isRefunded, detId, office) {
   const id = `member-${memberRowCount}`;
   const empOptions = getFilteredEmpOptions(name);
   const emp = employees.find(e => e.name === name);
-  const empOffice = office || emp?.department || '';
+  const empOffice = office || (emp && emp.department) || '';
 
   const row = document.createElement('tr');
   row.id = id;
@@ -2124,8 +2124,8 @@ function updateMemberName(sel) {
     const emp = employees.find(e => e.name === sel.value);
     const officeCell = row.querySelector('.member-office-cell');
     if (officeCell) {
-      officeCell.textContent = emp?.department || '';
-      row.dataset.office = emp?.department || '';
+      officeCell.textContent = (emp && emp.department) || '';
+      row.dataset.office = (emp && emp.department) || '';
     }
   }
   updateTotal();
@@ -2146,7 +2146,7 @@ function removeMemberRow(id) {
 
 async function saveRequest() {
   const travelType = document.getElementById('fTravelType').value;
-  const taskName = document.getElementById('fTaskName').value.trim() || document.getElementById('fTaskId').selectedOptions[0]?.text;
+  const taskName = document.getElementById('fTaskName').value.trim() || document.getElementById('fTaskId').(selectedOptions[0] && selectedOptions[0].text);
   const taskId = document.getElementById('fTaskId').value || null;
   const paymentDate = document.getElementById('fPaymentDate').value || null;
   const notes = document.getElementById('fNotes').value.trim() || null;
@@ -2333,8 +2333,8 @@ async function moveEmployee(index, direction) {
   const b = employees[newIndex];
 
   // sort_order を入れ替え（nullの場合は現在のindexをベースに）
-  const orderA = a.sort_order ?? index;
-  const orderB = b.sort_order ?? newIndex;
+  const orderA = (a.sort_order !== null && a.sort_order !== undefined ? a.sort_order : index);
+  const orderB = (b.sort_order !== null && b.sort_order !== undefined ? b.sort_order : newIndex);
 
   await Promise.all([
     sbPatch(`employees?id=eq.${a.id}`, { sort_order: orderB }),
