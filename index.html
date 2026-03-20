@@ -611,7 +611,7 @@
 <body>
 
 <!-- ===== CONFIG ===== -->
-<div id="configOverlay" class="modal-overlay" style="z-index:10000;display:flex">
+<div id="configOverlay" class="modal-overlay" style="z-index:10000;display:none">
   <div class="modal" style="max-width:500px">
     <div class="modal-header">
       <div class="modal-title">⚙️ Supabase 接続設定</div>
@@ -920,21 +920,34 @@
         </div>
         <div class="form-group">
           <label>支給日</label>
-          <input type="date" id="fPaymentDate" />
+          <div style="position:relative">
+            <div onclick="openMiniCal('pay')" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 11px;cursor:pointer;font-size:13px" id="payDisplay">
+              <span style="color:var(--text3)">📅</span>
+              <span id="payText" style="color:var(--text3)">未設定</span>
+            </div>
+            <div id="miniCal-pay" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;box-shadow:0 8px 30px rgba(0,0,0,.15);min-width:260px"></div>
+            <input type="hidden" id="fPaymentDate" />
+          </div>
         </div>
         <div class="form-group full">
           <label>出張期間 *</label>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <div style="display:flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:6px;overflow:hidden">
-              <button type="button" onclick="shiftDate('calStartInput',-1)" style="padding:7px 10px;background:var(--surface2);border:none;border-right:1px solid var(--border);cursor:pointer;color:var(--text2);font-size:14px;line-height:1">◀</button>
-              <input type="date" id="calStartInput" onchange="onDateInputChange()" style="border:none;background:transparent;padding:7px 8px;font-size:13px;color:var(--text);outline:none;width:140px" />
-              <button type="button" onclick="shiftDate('calStartInput',1)" style="padding:7px 10px;background:var(--surface2);border:none;border-left:1px solid var(--border);cursor:pointer;color:var(--text2);font-size:14px;line-height:1">▶</button>
+            <div style="position:relative">
+              <div onclick="openMiniCal('trip-start')" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 11px;cursor:pointer;font-size:13px;min-width:160px" id="tripStartDisplay">
+                <span style="color:var(--text3)">📅</span>
+                <span id="tripStartText" style="color:var(--text3)">開始日を選択</span>
+              </div>
+              <div id="miniCal-trip-start" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;box-shadow:0 8px 30px rgba(0,0,0,.15);min-width:260px"></div>
+              <input type="hidden" id="calStartInput" />
             </div>
-            <span style="color:var(--text3);font-size:13px">〜</span>
-            <div style="display:flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:6px;overflow:hidden">
-              <button type="button" onclick="shiftDate('calEndInput',-1)" style="padding:7px 10px;background:var(--surface2);border:none;border-right:1px solid var(--border);cursor:pointer;color:var(--text2);font-size:14px;line-height:1">◀</button>
-              <input type="date" id="calEndInput" onchange="onDateInputChange()" style="border:none;background:transparent;padding:7px 8px;font-size:13px;color:var(--text);outline:none;width:140px" />
-              <button type="button" onclick="shiftDate('calEndInput',1)" style="padding:7px 10px;background:var(--surface2);border:none;border-left:1px solid var(--border);cursor:pointer;color:var(--text2);font-size:14px;line-height:1">▶</button>
+            <span style="color:var(--text3);font-size:14px">〜</span>
+            <div style="position:relative">
+              <div onclick="openMiniCal('trip-end')" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 11px;cursor:pointer;font-size:13px;min-width:160px" id="tripEndDisplay">
+                <span style="color:var(--text3)">📅</span>
+                <span id="tripEndText" style="color:var(--text3)">終了日を選択</span>
+              </div>
+              <div id="miniCal-trip-end" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;box-shadow:0 8px 30px rgba(0,0,0,.15);min-width:260px"></div>
+              <input type="hidden" id="calEndInput" />
             </div>
           </div>
         </div>
@@ -1098,6 +1111,7 @@ window.addEventListener('DOMContentLoaded', () => {
   } else {
     document.getElementById('cfgUrl').value = SUPABASE_URL;
     document.getElementById('cfgKey').value = SUPABASE_KEY;
+    document.getElementById('configOverlay').style.display = 'flex';
   }
 });
 
@@ -1726,10 +1740,17 @@ async function openNewRequest() {
     if (el) el.value = '';
   });
   calStartDate = null; calEndDate = null; calHover = null; calStep = 0;
-  const si = document.getElementById('calStartInput');
-  const ei = document.getElementById('calEndInput');
+  var si = document.getElementById('calStartInput');
+  var ei = document.getElementById('calEndInput');
   if (si) si.value = '';
   if (ei) ei.value = '';
+  var tst = document.getElementById('tripStartText');
+  var tet = document.getElementById('tripEndText');
+  if (tst) { tst.textContent = '開始日を選択'; tst.style.color = 'var(--text3)'; }
+  if (tet) { tet.textContent = '終了日を選択'; tet.style.color = 'var(--text3)'; }
+  var pt = document.getElementById('payText');
+  if (pt)  { pt.textContent  = '未設定'; pt.style.color = 'var(--text3)'; }
+  document.getElementById('fPaymentDate').value = '';
   const bdRow = document.getElementById('amountBreakdownRow');
   if (bdRow) bdRow.style.display = 'none';
   document.getElementById('membersBody').innerHTML = '';
@@ -1756,10 +1777,24 @@ async function editRequest(id) {
   document.getElementById('fNotes').value = r.notes || '';
   calStartDate = r.start_date;
   calEndDate   = r.end_date;
-  const si2 = document.getElementById('calStartInput');
-  const ei2 = document.getElementById('calEndInput');
+  var si2 = document.getElementById('calStartInput');
+  var ei2 = document.getElementById('calEndInput');
   if (si2) si2.value = r.start_date || '';
   if (ei2) ei2.value = r.end_date   || '';
+  function setMiniText(id, val) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (val) {
+      var p = val.split('-');
+      el.textContent = p[0]+'年'+parseInt(p[1])+'月'+parseInt(p[2])+'日';
+      el.style.color = 'var(--text)';
+    } else {
+      el.style.color = 'var(--text3)';
+    }
+  }
+  setMiniText('tripStartText', r.start_date);
+  setMiniText('tripEndText',   r.end_date);
+  setMiniText('payText',       r.payment_date);
   updateDateDisplay();
 
   const dets = allDetails.filter(d => d.request_id === id);
@@ -1793,19 +1828,118 @@ function onTravelTypeChange() {
   onDateInputChange();
 }
 
-function shiftDate(inputId, delta) {
-  const el = document.getElementById(inputId);
-  if (!el) return;
-  if (!el.value) {
-    const t = new Date();
-    el.value = t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
-  } else {
-    const [y,m,d] = el.value.split('-').map(Number);
-    const dt = new Date(y, m-1, d + delta);
-    el.value = dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+// ============================================================
+// ミニカレンダー共通
+// ============================================================
+var miniCalState = {}; // key -> {year, month}
+
+function openMiniCal(key) {
+  // 他のカレンダーを閉じる
+  ['pay','trip-start','trip-end'].forEach(function(k) {
+    if (k !== key) {
+      var el = document.getElementById('miniCal-' + k);
+      if (el) el.style.display = 'none';
+    }
+  });
+  var popup = document.getElementById('miniCal-' + key);
+  if (!popup) return;
+  if (popup.style.display === 'block') {
+    popup.style.display = 'none';
+    return;
   }
-  onDateInputChange();
+  if (!miniCalState[key]) {
+    var now = new Date();
+    miniCalState[key] = { year: now.getFullYear(), month: now.getMonth() };
+  }
+  renderMiniCal(key);
+  popup.style.display = 'block';
 }
+
+function renderMiniCal(key) {
+  var popup = document.getElementById('miniCal-' + key);
+  if (!popup) return;
+  var s = miniCalState[key];
+  var mNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  var td = new Date();
+  var todayStr = td.getFullYear()+'-'+String(td.getMonth()+1).padStart(2,'0')+'-'+String(td.getDate()).padStart(2,'0');
+
+  // 現在の選択値
+  var inputId = key === 'pay' ? 'fPaymentDate' : (key === 'trip-start' ? 'calStartInput' : 'calEndInput');
+  var selVal = (document.getElementById(inputId)||{}).value || '';
+
+  var firstDay = new Date(s.year, s.month, 1).getDay();
+  var daysInMonth = new Date(s.year, s.month+1, 0).getDate();
+  var dayNames = ['日','月','火','水','木','金','土'];
+
+  var grid = '';
+  dayNames.forEach(function(n) {
+    grid += '<div style="text-align:center;font-size:10px;font-weight:600;color:var(--text3);padding:4px">' + n + '</div>';
+  });
+  for (var i = 0; i < firstDay; i++) grid += '<div></div>';
+  for (var d = 1; d <= daysInMonth; d++) {
+    var ds = s.year+'-'+String(s.month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var isToday = ds === todayStr;
+    var isSel   = ds === selVal;
+    var bg   = isSel ? 'var(--accent)' : 'transparent';
+    var col  = isSel ? '#fff' : (isToday ? 'var(--accent)' : 'var(--text)');
+    var fw   = (isSel || isToday) ? '700' : '400';
+    grid += '<div onclick="selectMiniCal('' + key + '','' + ds + '')" ' +
+      'style="text-align:center;padding:5px 2px;font-size:12px;cursor:pointer;border-radius:5px;' +
+      'background:' + bg + ';color:' + col + ';font-weight:' + fw + '">' + d + '</div>';
+  }
+
+  popup.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+      '<button type="button" onclick="miniCalPrev('' + key + '')" style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:4px 10px;cursor:pointer;font-size:14px;color:var(--text2)">◀</button>' +
+      '<span style="font-size:13px;font-weight:700">' + s.year + '年 ' + mNames[s.month] + '</span>' +
+      '<button type="button" onclick="miniCalNext('' + key + '')" style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:4px 10px;cursor:pointer;font-size:14px;color:var(--text2)">▶</button>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">' + grid + '</div>';
+}
+
+function miniCalPrev(key) {
+  if (!miniCalState[key]) return;
+  miniCalState[key].month--;
+  if (miniCalState[key].month < 0) { miniCalState[key].month = 11; miniCalState[key].year--; }
+  renderMiniCal(key);
+}
+function miniCalNext(key) {
+  if (!miniCalState[key]) return;
+  miniCalState[key].month++;
+  if (miniCalState[key].month > 11) { miniCalState[key].month = 0; miniCalState[key].year++; }
+  renderMiniCal(key);
+}
+
+function selectMiniCal(key, ds) {
+  var inputId = key === 'pay' ? 'fPaymentDate' : (key === 'trip-start' ? 'calStartInput' : 'calEndInput');
+  var inp = document.getElementById(inputId);
+  if (inp) inp.value = ds;
+
+  // 表示テキスト更新
+  var parts = ds.split('-');
+  var label = parts[0]+'年'+parseInt(parts[1])+'月'+parseInt(parts[2])+'日';
+  var textId = key === 'pay' ? 'payText' : (key === 'trip-start' ? 'tripStartText' : 'tripEndText');
+  var textEl = document.getElementById(textId);
+  if (textEl) { textEl.textContent = label; textEl.style.color = 'var(--text)'; }
+
+  // カレンダーを閉じる
+  var popup = document.getElementById('miniCal-' + key);
+  if (popup) popup.style.display = 'none';
+
+  // 出張期間の場合は金額を再計算
+  if (key === 'trip-start' || key === 'trip-end') onDateInputChange();
+}
+
+// 外クリックで全カレンダーを閉じる
+document.addEventListener('click', function(e) {
+  ['pay','trip-start','trip-end'].forEach(function(key) {
+    var popup   = document.getElementById('miniCal-' + key);
+    var display = document.getElementById(key === 'pay' ? 'payDisplay' : (key === 'trip-start' ? 'tripStartDisplay' : 'tripEndDisplay'));
+    if (popup && display && !popup.contains(e.target) && !display.contains(e.target)) {
+      popup.style.display = 'none';
+    }
+  });
+});
 
 function onDateInputChange() {
   const startEl = document.getElementById('calStartInput');
