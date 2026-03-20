@@ -715,6 +715,29 @@
           <div class="stat-value red" id="stat-refunded">¥ —</div>
         </div>
       </div>
+      <!-- 業務別集計 -->
+      <div class="table-container" style="margin-bottom:20px">
+        <div class="table-toolbar">
+          <div style="font-size:13px;font-weight:600">📊 業務別 出張手当集計</div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>業務名</th>
+              <th>件数</th>
+              <th>延べ人数</th>
+              <th>支給済合計</th>
+              <th>未支給合計</th>
+              <th>合計</th>
+            </tr>
+          </thead>
+          <tbody id="taskSummaryTable">
+            <tr class="no-data-row"><td colspan="6">読み込み中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 最近の出張手当 -->
       <div class="table-container">
         <div class="table-toolbar">
           <div style="font-size:13px;font-weight:600">最近の出張手当</div>
@@ -1171,38 +1194,103 @@ async function loadAll() {
 async function loadDashboard() {
   const now = new Date();
   const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  
+
   try {
-  const [reqRes, detRes] = await Promise.all([
-    sbGet('travel_requests?select=*&order=created_at.desc'),
-    sbGet('travel_allowance_details?select=*')
-  ]);
-  
-  if (reqRes.data) allRequests = reqRes.data;
-  if (detRes.data) allDetails = detRes.data;
+    const [reqRes, detRes] = await Promise.all([
+      sbGet('travel_requests?select=*&order=created_at.desc'),
+      sbGet('travel_allowance_details?select=*')
+    ]);
+    if (reqRes.data) allRequests = reqRes.data;
+    if (detRes.data) allDetails = detRes.data;
 
-  // Stats（事業所フィルター適用）
-  const officeReqs = currentOfficeDash === 'all' ? allRequests : allRequests.filter(r => r.office === currentOfficeDash);
-  const monthlyReqs = officeReqs.filter(r =>
-    r.payment_date && r.payment_date.startsWith(month) && r.status === 'paid'
-  );
-  const monthlyTotal = monthlyReqs.reduce((s, r) => {
-    const dets = allDetails.filter(d => d.request_id === r.id && !d.is_refunded);
-    return s + dets.reduce((a, d) => a + d.allowance_amount, 0);
-  }, 0);
-  const paidCount = officeReqs.filter(r => r.status === 'paid').length;
-  const pendingCount = officeReqs.filter(r => r.status === 'pending').length;
-  const refundedIds = officeReqs.map(r => r.id);
-  const refundedTotal = allDetails.filter(d => d.is_refunded && refundedIds.includes(d.request_id)).reduce((s, d) => s + d.allowance_amount, 0);
+    // 事業所フィルター
+    const officeReqs = currentOfficeDash === 'all'
+      ? allRequests
+      : allRequests.filter(r => r.office === currentOfficeDash);
 
-  document.getElementById('stat-monthly').textContent = `¥${monthlyTotal.toLocaleString()}`;
-  document.getElementById('stat-paid').textContent = paidCount;
-  document.getElementById('stat-pending').textContent = pendingCount;
-  document.getElementById('stat-refunded').textContent = `¥${refundedTotal.toLocaleString()}`;
+    // ── 今月の支給合計 ──
+    // payment_date が今月 OR payment_date未設定で start_date が今月 のどちらかで集計
+    const monthlyReqs = officeReqs.filter(r => {
+      if (r.status !== 'paid') return false;
+      if (r.payment_date) return r.payment_date.startsWith(month);
+      return r.start_date && r.start_date.startsWith(month);
+    });
+    const monthlyTotal = monthlyReqs.reduce((s, r) => {
+      const dets = allDetails.filter(d => d.request_id === r.id && !d.is_refunded);
+      return s + dets.reduce((a, d) => a + (d.allowance_amount || 0), 0);
+    }, 0);
 
-  // Recent table
-  renderRequestsTable('recentTable', officeReqs.slice(0, 8), true);
+    const paidCount    = officeReqs.filter(r => r.status === 'paid').length;
+    const pendingCount = officeReqs.filter(r => r.status === 'pending').length;
+    const officeIds    = officeReqs.map(r => r.id);
+    const refundedTotal = allDetails
+      .filter(d => d.is_refunded && officeIds.includes(d.request_id))
+      .reduce((s, d) => s + (d.allowance_amount || 0), 0);
+
+    document.getElementById('stat-monthly').textContent  = `¥${monthlyTotal.toLocaleString()}`;
+    document.getElementById('stat-paid').textContent     = paidCount;
+    document.getElementById('stat-pending').textContent  = pendingCount;
+    document.getElementById('stat-refunded').textContent = `¥${refundedTotal.toLocaleString()}`;
+
+    // ── 業務別集計 ──
+    renderTaskSummary(officeReqs);
+
+    // ── 最近の一覧 ──
+    renderRequestsTable('recentTable', officeReqs.slice(0, 8), true);
+
   } catch(e) { console.error('loadDashboard error:', e); }
+}
+
+function renderTaskSummary(reqs) {
+  const tbody = document.getElementById('taskSummaryTable');
+  if (!tbody) return;
+
+  // 業務名でグループ化
+  const map = {};
+  reqs.forEach(r => {
+    const key = r.task_name || '（未設定）';
+    if (!map[key]) map[key] = { count: 0, members: 0, paid: 0, pending: 0 };
+    const dets = allDetails.filter(d => d.request_id === r.id && !d.is_refunded);
+    const total = dets.reduce((s, d) => s + (d.allowance_amount || 0), 0);
+    map[key].count++;
+    map[key].members += dets.length;
+    if (r.status === 'paid')    map[key].paid    += total;
+    if (r.status === 'pending') map[key].pending += total;
+  });
+
+  const keys = Object.keys(map);
+  if (keys.length === 0) {
+    tbody.innerHTML = '<tr class="no-data-row"><td colspan="6">データがありません</td></tr>';
+    return;
+  }
+
+  // 合計行用
+  let sumCount = 0, sumMembers = 0, sumPaid = 0, sumPending = 0;
+
+  tbody.innerHTML = keys.sort().map(key => {
+    const g = map[key];
+    const total = g.paid + g.pending;
+    sumCount   += g.count;
+    sumMembers += g.members;
+    sumPaid    += g.paid;
+    sumPending += g.pending;
+    return `<tr>
+      <td style="padding:10px 14px;font-weight:500">🔧 ${key}</td>
+      <td style="padding:10px 14px;font-family:var(--mono);text-align:center">${g.count}件</td>
+      <td style="padding:10px 14px;font-family:var(--mono);text-align:center">${g.members}名</td>
+      <td style="padding:10px 14px;font-family:var(--mono);color:var(--green);font-weight:600">¥${g.paid.toLocaleString()}</td>
+      <td style="padding:10px 14px;font-family:var(--mono);color:var(--amber)">¥${g.pending.toLocaleString()}</td>
+      <td style="padding:10px 14px;font-family:var(--mono);font-weight:700">¥${total.toLocaleString()}</td>
+    </tr>`;
+  }).join('') + `
+    <tr style="background:var(--surface2);border-top:2px solid var(--border)">
+      <td style="padding:10px 14px;font-weight:700">合計</td>
+      <td style="padding:10px 14px;font-family:var(--mono);text-align:center;font-weight:700">${sumCount}件</td>
+      <td style="padding:10px 14px;font-family:var(--mono);text-align:center;font-weight:700">${sumMembers}名</td>
+      <td style="padding:10px 14px;font-family:var(--mono);color:var(--green);font-weight:700">¥${sumPaid.toLocaleString()}</td>
+      <td style="padding:10px 14px;font-family:var(--mono);color:var(--amber);font-weight:700">¥${sumPending.toLocaleString()}</td>
+      <td style="padding:10px 14px;font-family:var(--mono);font-weight:700;font-size:15px">¥${(sumPaid+sumPending).toLocaleString()}</td>
+    </tr>`;
 }
 
 // ============================================================
@@ -1570,10 +1658,10 @@ document.addEventListener('click', (e) => {
 // ============================================================
 function calculateAmount(travelType, startDate, endDate) {
   if (!startDate || !endDate) return 0;
-  const days = Math.floor((new Date(endDate) - new Date(startDate)) / 86400000) + 1;
-  const nights = Math.max(days - 1, 1);
-  if (travelType === 'day_trip')   return days * 1500;
-  if (travelType === 'overnight')  return 1500 + nights * 3000;  // 1500 + 泊数×3000
+  const days   = Math.floor((new Date(endDate) - new Date(startDate)) / 86400000) + 1;
+  const nights = days - 1; // 泊数 = 日数 - 1
+  if (travelType === 'day_trip')    return days * 1500;
+  if (travelType === 'overnight')   return 1500 + nights * 3000; // ¥1,500 + ¥3,000 × 泊数
   if (travelType === 'night_shift') return days * 3000;
   return 0;
 }
@@ -1581,9 +1669,9 @@ function calculateAmount(travelType, startDate, endDate) {
 // 金額の内訳テキストを返す
 function calcBreakdown(travelType, startDate, endDate) {
   if (!startDate || !endDate || !travelType) return '';
-  const days = Math.floor((new Date(endDate) - new Date(startDate)) / 86400000) + 1;
-  const nights = Math.max(days - 1, 1);
-  const amt = calculateAmount(travelType, startDate, endDate);
+  const days   = Math.floor((new Date(endDate) - new Date(startDate)) / 86400000) + 1;
+  const nights = days - 1;
+  const amt    = calculateAmount(travelType, startDate, endDate);
   if (travelType === 'day_trip')
     return `¥1,500 × ${days}日 ＝ ¥${amt.toLocaleString()}`;
   if (travelType === 'overnight')
