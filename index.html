@@ -399,9 +399,9 @@
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 16px;
-    min-width: 320px;
+    width: 100%;
     display: none;
-    margin-top: 6px;
+    margin-top: 8px;
   }
   .calendar-popup.open { display: block; }
   .cal-header {
@@ -1517,16 +1517,6 @@ function toggleCalendar() {
   if (!calStartDate) calStep = 0;
   drawCal();
   popup.classList.add('open');
-  positionCalendar();
-}
-
-function positionCalendar() {
-  const disp = document.getElementById('dateRangeDisplay');
-  const popup = document.getElementById('calendarPopup');
-  const dr = disp.getBoundingClientRect();
-  const pr = popup.getBoundingClientRect();
-  popup.style.top  = (dr.top - pr.height - 8) + 'px';
-  popup.style.left = dr.left + 'px';
 }
 
 function prevMonth() { calMonth--; if (calMonth < 0)  { calMonth=11; calYear--; } drawCal(); }
@@ -2218,17 +2208,7 @@ function togglePayCal() {
     const now = new Date();
     payCalYear = now.getFullYear();
     payCalMonth = now.getMonth();
-    // 位置設定（上に表示）
     renderPayCal();
-    const display = document.getElementById('payDateDisplay');
-    const rect = display.getBoundingClientRect();
-    popup.style.visibility = 'hidden';
-    popup.style.display = 'block';
-    const popH = popup.offsetHeight;
-    popup.style.display = '';
-    popup.style.visibility = '';
-    popup.style.top = (rect.top + window.scrollY - popH - 8) + 'px';
-    popup.style.left = rect.left + 'px';
     popup.classList.add('open');
   }
 }
