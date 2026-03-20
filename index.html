@@ -680,7 +680,10 @@
 
     <!-- 今日の支給 -->
     <div style="margin:20px 12px 0;border-top:1px solid var(--border);padding-top:16px">
-      <div style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;padding:0 8px">今日の支給</div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;padding:0 8px">
+        <div style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase">今日の支給</div>
+        <div id="today-date-label" style="font-size:10px;color:var(--text3)"></div>
+      </div>
 
       <div onclick="showTodayDetail('秋田事業所')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
         <div style="font-size:10px;color:var(--text3);margin-bottom:6px;font-weight:600">🏢 秋田事業所</div>
@@ -699,7 +702,7 @@
         <div id="today-total-amount" style="font-size:20px;font-weight:700;font-family:var(--mono);color:var(--accent)">¥ —</div>
       </div>
 
-      <div id="today-date-label" style="font-size:10px;color:var(--text3);text-align:center;margin-top:8px"></div>
+
     </div>
   </nav>
 
@@ -790,27 +793,24 @@
           <div class="page-title">出張手当一覧</div>
           <div class="page-desc">すべての出張手当申請・支給履歴</div>
         </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
-        <span style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.5px">事業所</span>
-        <div class="tabs" style="margin-bottom:0">
-          <button class="tab-btn active" onclick="filterOfficeReq('all', this)">全事業所</button>
-          <button class="tab-btn" onclick="filterOfficeReq('秋田事業所', this)">🏢 秋田</button>
-          <button class="tab-btn" onclick="filterOfficeReq('横手事業所', this)">🏢 横手</button>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+          <span style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.5px;white-space:nowrap">事業所</span>
+          <div class="tabs" style="margin-bottom:0">
+            <button class="tab-btn active" onclick="filterOfficeReq('all', this)">全事業所</button>
+            <button class="tab-btn" onclick="filterOfficeReq('秋田事業所', this)">🏢 秋田</button>
+            <button class="tab-btn" onclick="filterOfficeReq('横手事業所', this)">🏢 横手</button>
+          </div>
         </div>
-      </div>
-      <div class="tabs">
-        <button class="tab-btn active" onclick="filterStatus('all', this)">すべて</button>
-        <button class="tab-btn" onclick="filterStatus('pending', this)">未支給</button>
-        <button class="tab-btn" onclick="filterStatus('paid', this)">支給済</button>
       </div>
       <div class="table-container">
         <div class="table-toolbar">
-          <div class="table-toolbar-left">
-            <div class="search-box">
-              <span>🔍</span>
-              <input class="search-input" placeholder="業務名・氏名で検索" id="searchInput" oninput="applySearch()" />
-            </div>
+          <div class="table-toolbar-left" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <button class="tab-btn active" onclick="filterStatus('all', this)">すべて</button>
+            <button class="tab-btn" onclick="filterStatus('pending', this)">未支給</button>
+            <button class="tab-btn" onclick="filterStatus('paid', this)">支給済</button>
+            <select id="monthFilter" onchange="applySearch()" style="padding:4px 8px;font-size:12px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--text);cursor:pointer">
+              <option value="">全月</option>
+            </select>
           </div>
           <button class="btn btn-ghost btn-sm" onclick="loadRequests(); toast('更新しました', 'info')">🔄 更新</button>
         </div>
@@ -1536,6 +1536,7 @@ async function loadRequests() {
   ]); var reqRes=_pAll[0], detRes=_pAll[1];
   if (reqRes.data) allRequests = reqRes.data;
   if (detRes.data) allDetails = detRes.data;
+  buildMonthFilter();
   applySearch();
 }
 
@@ -1561,19 +1562,41 @@ function filterStatus(status, btn) {
 }
 
 function applySearch() {
-  const q = ((document.getElementById('searchInput') && document.getElementById('searchInput').value) || '').toLowerCase();
   let filtered = allRequests;
   if (currentOfficeReq !== 'all') filtered = filtered.filter(function(r) { return r.office === currentOfficeReq; });
   if (currentStatus !== 'all') filtered = filtered.filter(function(r) { return r.status === currentStatus; });
-  if (q) {
+  var monthSel = document.getElementById('monthFilter');
+  var selectedMonth = monthSel ? monthSel.value : '';
+  if (selectedMonth) {
     filtered = filtered.filter(function(r) {
-      const taskMatch = (r.task_name && r.task_name.toLowerCase().includes(q));
-      const memberMatch = allDetails.filter(function(d) { return d.request_id === r.id; })
-        .some(function(d) { return (d.employee_name && d.employee_name.toLowerCase().includes(q)); });
-      return taskMatch || memberMatch;
+      var dateKey = r.start_date || r.payment_date || '';
+      return dateKey.startsWith(selectedMonth);
     });
   }
   renderRequestsTable('requestsTable', filtered, false);
+}
+
+function buildMonthFilter() {
+  var sel = document.getElementById('monthFilter');
+  if (!sel) return;
+  // allRequests から年月一覧を生成
+  var months = {};
+  allRequests.forEach(function(r) {
+    var d = r.start_date || r.payment_date || '';
+    if (d.length >= 7) months[d.slice(0,7)] = true;
+  });
+  var sorted = Object.keys(months).sort().reverse();
+  var current = sel.value;
+  sel.innerHTML = '<option value="">全月</option>';
+  sorted.forEach(function(m) {
+    var parts = m.split('-');
+    var label = parts[0] + '年' + parseInt(parts[1]) + '月';
+    var opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = label;
+    if (m === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
 }
 
 function renderRequestsTable(tableId, reqs, simple) {
