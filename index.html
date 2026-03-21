@@ -600,6 +600,34 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .no-data-row td { text-align: center; color: var(--text3); padding: 32px; }
+  /* ===== TRIP CALENDAR ===== */
+  .trip-cal-popup { display:none; }
+  .trip-cal-months { display:flex; gap:20px; }
+  .trip-cal-month { flex:1; }
+  .trip-cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .trip-cal-title { font-size:13px; font-weight:700; color:var(--text); }
+  .trip-cal-nav {
+    background:var(--surface2); border:1px solid var(--border); color:var(--text2);
+    cursor:pointer; font-size:16px; padding:2px 9px; border-radius:4px;
+    transition:all 0.1s; line-height:1.5;
+  }
+  .trip-cal-nav:hover { background:var(--border); color:var(--text); }
+  .trip-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+  .trip-cal-dow { text-align:center; font-size:9px; font-weight:700; color:var(--text3); padding:4px 0 6px; letter-spacing:.06em; }
+  .trip-cal-day {
+    text-align:center; padding:6px 2px; font-size:12px;
+    cursor:pointer; border-radius:4px; transition:all 0.1s; user-select:none; color:var(--text);
+  }
+  .trip-cal-day:hover { background:var(--surface2); }
+  .trip-cal-day.empty { cursor:default; background:transparent !important; }
+  .trip-cal-day.today { color:var(--accent); font-weight:700; }
+  .trip-cal-day.start, .trip-cal-day.end { background:var(--accent); color:#fff; border-radius:4px; }
+  .trip-cal-day.in-range { background:rgba(181,96,26,.12); border-radius:0; }
+  .trip-cal-actions {
+    display:flex; justify-content:flex-end; gap:8px;
+    margin-top:14px; padding-top:12px; border-top:1px solid var(--border);
+  }
+
 </style>
 </head>
 <body>
@@ -920,30 +948,20 @@
               <span style="color:var(--text3)">📅</span>
               <span id="payText" style="color:var(--text3)">未設定</span>
             </div>
-            <div id="miniCal-pay" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;box-shadow:0 8px 30px rgba(0,0,0,.15);min-width:260px"></div>
+            <div id="miniCal-pay" style="display:none;position:fixed;z-index:9998;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;box-shadow:0 8px 30px rgba(0,0,0,.2);min-width:280px"></div>
             <input type="hidden" id="fPaymentDate" />
           </div>
         </div>
         <div class="form-group full">
           <label>出張期間 *</label>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <div style="position:relative">
-              <div onclick="openMiniCal('trip-start')" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 11px;cursor:pointer;font-size:13px;min-width:160px" id="tripStartDisplay">
-                <span style="color:var(--text3)">📅</span>
-                <span id="tripStartText" style="color:var(--text3)">開始日を選択</span>
-              </div>
-              <div id="miniCal-trip-start" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;box-shadow:0 8px 30px rgba(0,0,0,.15);min-width:260px"></div>
-              <input type="hidden" id="calStartInput" />
+          <div style="position:relative">
+            <div onclick="openTripCal()" id="tripDisplay" style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;cursor:pointer;font-size:13px">
+              <span id="tripDateText" style="color:var(--text3)">日付を選択してください</span>
+              <span style="font-size:16px">📅</span>
             </div>
-            <span style="color:var(--text3);font-size:14px">〜</span>
-            <div style="position:relative">
-              <div onclick="openMiniCal('trip-end')" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 11px;cursor:pointer;font-size:13px;min-width:160px" id="tripEndDisplay">
-                <span style="color:var(--text3)">📅</span>
-                <span id="tripEndText" style="color:var(--text3)">終了日を選択</span>
-              </div>
-              <div id="miniCal-trip-end" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;box-shadow:0 8px 30px rgba(0,0,0,.15);min-width:260px"></div>
-              <input type="hidden" id="calEndInput" />
-            </div>
+            <div class="trip-cal-popup" id="tripCalPopup" style="display:none;position:fixed;z-index:9998;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.18);width:580px"></div>
+            <input type="hidden" id="calStartInput" />
+            <input type="hidden" id="calEndInput" />
           </div>
         </div>
         <div class="form-group full" id="amountBreakdownRow" style="display:none">
@@ -1070,6 +1088,214 @@
   </div>
 
 <script>
+// ============================================================
+// 出張期間カレンダー（2ヶ月表示）
+// ============================================================
+var tripCalYear, tripCalMonth;
+var tripCalStart = null, tripCalEnd = null, tripCalStep = 0;
+
+function openTripCal() {
+  var popup = document.getElementById('tripCalPopup');
+  if (!popup) return;
+  if (popup.style.display === 'block') {
+    popup.style.display = 'none';
+    return;
+  }
+  var now = new Date();
+  tripCalYear  = tripCalStart ? parseInt(tripCalStart.slice(0,4)) : now.getFullYear();
+  tripCalMonth = tripCalStart ? parseInt(tripCalStart.slice(5,7))-1 : now.getMonth();
+  renderTripCal();
+
+  // 位置決定
+  popup.style.visibility = 'hidden';
+  popup.style.display = 'block';
+  var trigger = document.getElementById('tripDisplay');
+  if (trigger) {
+    var rect = trigger.getBoundingClientRect();
+    var popH = popup.offsetHeight;
+    var popW = popup.offsetWidth;
+    var top = rect.bottom + 6;
+    var left = rect.left;
+    if (top + popH > window.innerHeight - 10) top = rect.top - popH - 6;
+    if (left + popW > window.innerWidth - 10) left = rect.right - popW;
+    popup.style.top  = top + 'px';
+    popup.style.left = left + 'px';
+  }
+  popup.style.visibility = 'visible';
+}
+
+function renderTripCal() {
+  var popup = document.getElementById('tripCalPopup');
+  if (!popup) return;
+  popup.innerHTML = '';
+
+  var y2 = tripCalMonth === 11 ? tripCalYear+1 : tripCalYear;
+  var m2 = tripCalMonth === 11 ? 0 : tripCalMonth+1;
+
+  var months = document.createElement('div');
+  months.className = 'trip-cal-months';
+  months.appendChild(buildTripMonth(tripCalYear, tripCalMonth, true));
+  months.appendChild(buildTripMonth(y2, m2, false));
+  popup.appendChild(months);
+
+  var actions = document.createElement('div');
+  actions.className = 'trip-cal-actions';
+  var clearBtn = document.createElement('button');
+  clearBtn.className = 'btn btn-ghost btn-sm';
+  clearBtn.textContent = 'クリア';
+  clearBtn.onmousedown = function(e) { e.stopPropagation(); clearTripCal(); };
+  var applyBtn = document.createElement('button');
+  applyBtn.className = 'btn btn-primary btn-sm';
+  applyBtn.textContent = '確定';
+  applyBtn.onmousedown = function(e) { e.stopPropagation(); applyTripCal(); };
+  actions.appendChild(clearBtn);
+  actions.appendChild(applyBtn);
+  popup.appendChild(actions);
+
+  popup.onclick = function(e) { e.stopPropagation(); };
+}
+
+function buildTripMonth(y, m, showPrev) {
+  var DOW = ['日','月','火','水','木','金','土'];
+  var first = new Date(y, m, 1).getDay();
+  var days  = new Date(y, m+1, 0).getDate();
+  var today = new Date();
+  var todayStr = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+
+  var monthDiv = document.createElement('div');
+  monthDiv.className = 'trip-cal-month';
+
+  // ヘッダー
+  var hdr = document.createElement('div');
+  hdr.className = 'trip-cal-header';
+
+  var prevBtn = document.createElement('span');
+  if (showPrev) {
+    prevBtn.className = 'trip-cal-nav';
+    prevBtn.textContent = '‹';
+    prevBtn.onmousedown = function(e) { e.stopPropagation(); tripCalPrev(); };
+  }
+
+  var title = document.createElement('span');
+  title.className = 'trip-cal-title';
+  title.textContent = y + '年 ' + (m+1) + '月';
+
+  var nextBtn = document.createElement('span');
+  if (!showPrev) {
+    nextBtn.className = 'trip-cal-nav';
+    nextBtn.textContent = '›';
+    nextBtn.onmousedown = function(e) { e.stopPropagation(); tripCalNext(); };
+  }
+
+  hdr.appendChild(prevBtn);
+  hdr.appendChild(title);
+  hdr.appendChild(nextBtn);
+  monthDiv.appendChild(hdr);
+
+  // グリッド
+  var grid = document.createElement('div');
+  grid.className = 'trip-cal-grid';
+
+  // 曜日
+  DOW.forEach(function(d) {
+    var el = document.createElement('div');
+    el.className = 'trip-cal-dow';
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  // 空白
+  for (var i=0; i<first; i++) {
+    var el = document.createElement('div');
+    el.className = 'trip-cal-day empty';
+    grid.appendChild(el);
+  }
+
+  // 日付
+  for (var d=1; d<=days; d++) {
+    (function(day) {
+      var ds = y+'-'+String(m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+      var cls = 'trip-cal-day';
+      if (ds === todayStr) cls += ' today';
+      if (tripCalStart && tripCalEnd) {
+        if (ds === tripCalStart) cls += ' start';
+        else if (ds === tripCalEnd) cls += ' end';
+        else if (ds > tripCalStart && ds < tripCalEnd) cls += ' in-range';
+      } else if (tripCalStart && ds === tripCalStart) cls += ' start';
+      var cell = document.createElement('div');
+      cell.className = cls;
+      cell.textContent = String(day);
+      cell.onmousedown = function(e) { e.stopPropagation(); selectTripDay(ds); };
+      grid.appendChild(cell);
+    })(d);
+  }
+
+  monthDiv.appendChild(grid);
+  return monthDiv;
+}
+
+function selectTripDay(ds) {
+  if (tripCalStep === 0 || (tripCalStep === 1 && ds < tripCalStart)) {
+    tripCalStart = ds; tripCalEnd = null; tripCalStep = 1;
+  } else {
+    tripCalEnd = ds; tripCalStep = 0;
+  }
+  renderTripCal();
+}
+
+function tripCalPrev() {
+  tripCalMonth--;
+  if (tripCalMonth < 0) { tripCalMonth = 11; tripCalYear--; }
+  renderTripCal();
+}
+function tripCalNext() {
+  tripCalMonth++;
+  if (tripCalMonth > 11) { tripCalMonth = 0; tripCalYear++; }
+  renderTripCal();
+}
+
+function clearTripCal() {
+  tripCalStart = null; tripCalEnd = null; tripCalStep = 0;
+  var txt = document.getElementById('tripDateText');
+  if (txt) { txt.textContent = '日付を選択してください'; txt.style.color = 'var(--text3)'; }
+  document.getElementById('calStartInput').value = '';
+  document.getElementById('calEndInput').value   = '';
+  calStartDate = null; calEndDate = null;
+  renderTripCal();
+}
+
+function applyTripCal() {
+  if (!tripCalStart) return;
+  if (!tripCalEnd) tripCalEnd = tripCalStart;
+  document.getElementById('calStartInput').value = tripCalStart;
+  document.getElementById('calEndInput').value   = tripCalEnd;
+  calStartDate = tripCalStart;
+  calEndDate   = tripCalEnd;
+  // 表示テキスト更新
+  var txt = document.getElementById('tripDateText');
+  if (txt) {
+    var fmt = function(ds) {
+      var p = ds.split('-');
+      return p[0]+'年'+parseInt(p[1])+'月'+parseInt(p[2])+'日';
+    };
+    txt.textContent = tripCalStart === tripCalEnd
+      ? fmt(tripCalStart)
+      : fmt(tripCalStart) + ' 〜 ' + fmt(tripCalEnd);
+    txt.style.color = 'var(--text)';
+  }
+  document.getElementById('tripCalPopup').style.display = 'none';
+  onDateInputChange();
+}
+
+// 外クリックで閉じる
+document.addEventListener('click', function(e) {
+  var popup   = document.getElementById('tripCalPopup');
+  var trigger = document.getElementById('tripDisplay');
+  if (popup && trigger && !popup.contains(e.target) && !trigger.contains(e.target)) {
+    popup.style.display = 'none';
+  }
+});
+
 // ============================================================
 // CONFIG
 // ============================================================
@@ -1551,7 +1777,8 @@ function filterOfficeReq(office, btn) {
 
 function filterStatus(status, btn) {
   currentStatus = status;
-  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  var parent = btn.closest('.tabs') || btn.closest('.table-toolbar-left') || btn.parentNode;
+  parent.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
   applySearch();
 }
@@ -1846,14 +2073,13 @@ async function openNewRequest() {
     if (el) el.value = '';
   });
   calStartDate = null; calEndDate = null; calHover = null; calStep = 0;
+  tripCalStart = null; tripCalEnd = null; tripCalStep = 0;
   var si = document.getElementById('calStartInput');
   var ei = document.getElementById('calEndInput');
   if (si) si.value = '';
   if (ei) ei.value = '';
-  var tst = document.getElementById('tripStartText');
-  var tet = document.getElementById('tripEndText');
-  if (tst) { tst.textContent = '開始日を選択'; tst.style.color = 'var(--text3)'; }
-  if (tet) { tet.textContent = '終了日を選択'; tet.style.color = 'var(--text3)'; }
+  var tdt = document.getElementById('tripDateText');
+  if (tdt) { tdt.textContent = '日付を選択してください'; tdt.style.color = 'var(--text3)'; }
   var pt = document.getElementById('payText');
   if (pt)  { pt.textContent  = '未設定'; pt.style.color = 'var(--text3)'; }
   document.getElementById('fPaymentDate').value = '';
@@ -1909,8 +2135,17 @@ async function editRequest(id) {
       el.style.color = 'var(--text3)';
     }
   }
-  setMiniText('tripStartText', r.start_date);
-  setMiniText('tripEndText',   r.end_date);
+  // 出張期間テキスト更新
+  var tdt2 = document.getElementById('tripDateText');
+  if (tdt2 && r.start_date) {
+    var fmt2 = function(ds){ var p=ds.split('-'); return p[0]+'年'+parseInt(p[1])+'月'+parseInt(p[2])+'日'; };
+    tdt2.textContent = r.start_date === r.end_date
+      ? fmt2(r.start_date)
+      : fmt2(r.start_date) + ' 〜 ' + fmt2(r.end_date || r.start_date);
+    tdt2.style.color = 'var(--text)';
+    tripCalStart = r.start_date;
+    tripCalEnd   = r.end_date || r.start_date;
+  }
   setMiniText('payText',       r.payment_date);
 
   // allDetailsにない場合はSupabaseから直接取得
@@ -1955,13 +2190,12 @@ function onTravelTypeChange() {
 var miniCalState = {}; // key -> {year, month}
 
 function openMiniCal(key) {
-  // 他のカレンダーを閉じる
-  ['pay','trip-start','trip-end'].forEach(function(k) {
-    if (k !== key) {
-      var el = document.getElementById('miniCal-' + k);
-      if (el) el.style.display = 'none';
-    }
-  });
+  // 他のカレンダーを閉じる（payのみ）
+  var el = document.getElementById('miniCal-pay');
+  if (el && key !== 'pay') el.style.display = 'none';
+  // 出張期間カレンダーも閉じる
+  var tc = document.getElementById('tripCalPopup');
+  if (tc) tc.style.display = 'none';
   var popup = document.getElementById('miniCal-' + key);
   if (!popup) return;
   if (popup.style.display === 'block') {
@@ -1972,8 +2206,28 @@ function openMiniCal(key) {
     var now = new Date();
     miniCalState[key] = { year: now.getFullYear(), month: now.getMonth() };
   }
-  renderMiniCal(key);
+  // 一旦表示してサイズを取得
+  popup.style.visibility = 'hidden';
   popup.style.display = 'block';
+  renderMiniCal(key);
+
+  // トリガー要素の位置を取得して配置
+  var triggerId = key === 'pay' ? 'payDisplay' : (key === 'trip-start' ? 'tripStartDisplay' : 'tripEndDisplay');
+  var trigger = document.getElementById(triggerId);
+  if (trigger) {
+    var rect = trigger.getBoundingClientRect();
+    var popH = popup.offsetHeight;
+    var popW = popup.offsetWidth;
+    var top = rect.bottom + 6;
+    var left = rect.left;
+    // 画面下に収まらない場合は上に表示
+    if (top + popH > window.innerHeight - 10) top = rect.top - popH - 6;
+    // 画面右にはみ出す場合は右端に揃える
+    if (left + popW > window.innerWidth - 10) left = rect.right - popW;
+    popup.style.top  = top + 'px';
+    popup.style.left = left + 'px';
+  }
+  popup.style.visibility = 'visible';
 }
 
 function renderMiniCal(key) {
