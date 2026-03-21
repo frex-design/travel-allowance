@@ -64,13 +64,7 @@
     align-items: center;
     gap: 12px;
   }
-  .header-logo {
-    width: 32px; height: 32px;
-    background: linear-gradient(135deg, #c4702a, #d4956a);
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-  }
+
   .header-title { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
   .header-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
   .header-actions { display: flex; gap: 8px; }
@@ -648,11 +642,12 @@
 
 <!-- ===== HEADER ===== -->
 <header>
-  <div class="header-brand">
-    <div class="header-logo">🛣️</div>
-    <div>
+  <div class="header-brand" style="display:flex;align-items:center;gap:10px">
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="width:10px;height:10px;border-radius:50%;background:#b5601a;display:inline-block;flex-shrink:0"></span>
+      <span style="font-size:14px;font-weight:700;letter-spacing:-0.3px;color:var(--text)">FRe:x Design inc.</span>
+      <span style="color:var(--border);font-size:16px;margin:0 4px">｜</span>
       <div class="header-title">出張手当管理システム</div>
-      <div class="header-sub">株式会社フレックスデザイン</div>
     </div>
   </div>
   <div class="header-actions">
