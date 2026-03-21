@@ -845,6 +845,7 @@
               <th>事業所</th>
               <th>出張タイプ</th>
               <th>期間</th>
+              <th>日数</th>
               <th>参加人数</th>
               <th>支給合計</th>
               <th>ステータス</th>
@@ -852,7 +853,7 @@
             </tr>
           </thead>
           <tbody id="requestsTable">
-            <tr class="no-data-row"><td colspan="8">読み込み中...</td></tr>
+            <tr class="no-data-row"><td colspan="10">読み込み中...</td></tr>
           </tbody>
         </table>
       </div>
@@ -955,9 +956,12 @@
         <div class="form-group full">
           <label>出張期間 *</label>
           <div style="position:relative">
-            <div onclick="openTripCal()" id="tripDisplay" style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;cursor:pointer;font-size:13px">
-              <span id="tripDateText" style="color:var(--text3)">日付を選択してください</span>
-              <span style="font-size:16px">📅</span>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div onclick="openTripCal()" id="tripDisplay" style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;cursor:pointer;font-size:13px;flex:1">
+                <span id="tripDateText" style="color:var(--text3)">日付を選択してください</span>
+                <span style="font-size:16px">📅</span>
+              </div>
+              <span id="tripDaysLabel" style="display:none;font-size:13px;font-weight:700;color:var(--accent);white-space:nowrap;background:rgba(181,96,26,.08);padding:5px 10px;border-radius:6px"></span>
             </div>
             <div class="trip-cal-popup" id="tripCalPopup" style="display:none;position:fixed;z-index:9998;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.18);width:580px"></div>
             <input type="hidden" id="calStartInput" />
@@ -1261,6 +1265,8 @@ function clearTripCal() {
   document.getElementById('calStartInput').value = '';
   document.getElementById('calEndInput').value   = '';
   calStartDate = null; calEndDate = null;
+  var daysEl = document.getElementById('tripDaysLabel');
+  if (daysEl) daysEl.style.display = 'none';
   renderTripCal();
 }
 
@@ -1284,6 +1290,14 @@ function applyTripCal() {
     txt.style.color = 'var(--text)';
   }
   document.getElementById('tripCalPopup').style.display = 'none';
+  // 日数表示
+  var nights = dateDiffDays(tripCalStart, tripCalEnd);
+  var days = nights + 1;
+  var daysEl = document.getElementById('tripDaysLabel');
+  if (daysEl) {
+    daysEl.textContent = days + '日間';
+    daysEl.style.display = 'inline';
+  }
   onDateInputChange();
 }
 
@@ -1795,6 +1809,14 @@ function applySearch() {
       return dateKey.startsWith(selectedMonth);
     });
   }
+  // 支給日の新しい順→古い順でソート（支給日未設定は開始日で代替）
+  filtered = filtered.slice().sort(function(a, b) {
+    var da = a.payment_date || a.start_date || '';
+    var db = b.payment_date || b.start_date || '';
+    if (da > db) return -1;
+    if (da < db) return 1;
+    return 0;
+  });
   renderRequestsTable('requestsTable', filtered, false);
 }
 
@@ -1834,6 +1856,12 @@ function renderRequestsTable(tableId, reqs, simple) {
     const typeLabel = { day_trip:'🚗 日帰り', overnight:'🏨 宿泊', night_shift:'🌙 夜勤' }[r.travel_type] || r.travel_type;
     const typeBadge = { day_trip:'badge-day', overnight:'badge-overnight', night_shift:'badge-night' }[r.travel_type] || '';
     const period = r.start_date === r.end_date ? r.start_date : `${r.start_date} 〜 ${r.end_date}`;
+    const tripDays = (function(){
+      if (!r.start_date) return '';
+      var end = r.end_date || r.start_date;
+      var n = dateDiffDays(r.start_date, end);
+      return (n+1) + '日';
+    })();
     const statusMap = { pending: ['badge-pending','未支給'], paid: ['badge-paid','支給済'], cancelled: ['badge-cancelled','キャンセル'], refunded: ['badge-refunded','返還済'] };
     var _ss = statusMap[r.status] || ['','']; var sc=_ss[0], sl=_ss[1];
     const refundNote = refunded > 0 ? `<div style="font-size:11px;color:var(--red);margin-top:2px">返還 ¥${refunded.toLocaleString()}</div>` : '';
@@ -1848,6 +1876,7 @@ function renderRequestsTable(tableId, reqs, simple) {
         <td>${r.task_name}</td>
         <td><span class="badge ${typeBadge}">${typeLabel}</span></td>
         <td style="font-size:12px;color:var(--text2)">${period}</td>
+        <td style="font-size:12px;color:var(--text3);font-family:var(--mono)">${tripDays}</td>
         <td style="font-family:var(--mono)">${dets.length}名</td>
         <td><span style="font-family:var(--mono);font-weight:600;color:var(--green)">¥${total.toLocaleString()}</span>${refundNote}</td>
         <td><span class="badge ${sc}">${sl}</span></td>
@@ -1859,6 +1888,7 @@ function renderRequestsTable(tableId, reqs, simple) {
       <td>${officeBadge}</td>
       <td><span class="badge ${typeBadge}">${typeLabel}</span></td>
       <td style="font-size:12px;color:var(--text2)">${period}</td>
+      <td style="font-size:12px;color:var(--text3);font-family:var(--mono)">${tripDays}</td>
       <td style="font-family:var(--mono)">${dets.length}名</td>
       <td><span style="font-family:var(--mono);font-weight:600;color:var(--green)">¥${total.toLocaleString()}</span>${refundNote}</td>
       <td><span class="badge ${sc}">${sl}</span></td>
