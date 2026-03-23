@@ -628,6 +628,13 @@
     margin-top:14px; padding-top:12px; border-top:1px solid var(--border);
   }
 
+  @media print {
+    body > *:not(#todayPrintArea) { display: none !important; }
+    #todayPrintArea { display: block !important; }
+    #todayPrintArea .no-print { display: none !important; }
+  }
+  #todayPrintArea { display: none; }
+
 </style>
 </head>
 <body>
@@ -1092,6 +1099,7 @@
     </div>
     <div class="modal-body" id="todayDetailBody"></div>
     <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="printTodayDetail()">🖨️ 印刷</button>
       <button class="btn btn-ghost" onclick="closeModal('todayDetailModal')">閉じる</button>
     </div>
   </div>
@@ -2955,6 +2963,36 @@ function parseCSVLine(line) {
   }
   result.push(cur);
   return result;
+}
+
+
+function printTodayDetail() {
+  var title = document.getElementById('todayDetailTitle').textContent;
+  var body  = document.getElementById('todayDetailBody').innerHTML;
+
+  var win = window.open('', '_blank', 'width=700,height=800');
+  win.document.write('<html><head><meta charset="UTF-8"><title>' + title + '</title><style>');
+  win.document.write('body{font-family:sans-serif;font-size:13px;color:#222;padding:20px;margin:0}');
+  win.document.write('h2{font-size:16px;font-weight:700;margin:0 0 16px;padding-bottom:10px;border-bottom:2px solid #b5601a;color:#b5601a}');
+  win.document.write('.card{border:1px solid #ddd;border-radius:6px;padding:12px;margin-bottom:12px}');
+  win.document.write('.card-title{font-weight:700;font-size:14px;margin-bottom:4px}');
+  win.document.write('.card-sub{font-size:11px;color:#888;margin-bottom:10px}');
+  win.document.write('table{width:100%;border-collapse:collapse;font-size:12px}');
+  win.document.write('th{background:#f5f5f5;padding:5px 10px;text-align:left;font-weight:600;font-size:11px;color:#666;border-top:1px solid #eee}');
+  win.document.write('td{padding:6px 10px;border-top:1px solid #eee}');
+  win.document.write('.amt{font-weight:700;color:#2d6235}');
+  win.document.write('.footer{border-top:2px solid #ddd;margin-top:12px;padding-top:10px;display:flex;justify-content:space-between;align-items:center}');
+  win.document.write('.footer-label{font-weight:700}');
+  win.document.write('.footer-amt{font-size:18px;font-weight:700;color:#b5601a}');
+  win.document.write('.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}');
+  win.document.write('button{display:none}');
+  win.document.write('</style></head><body>');
+  win.document.write('<h2>' + title + '</h2>');
+  win.document.write(body);
+  win.document.write('</body></html>');
+  win.document.close();
+  win.focus();
+  setTimeout(function() { win.print(); }, 300);
 }
 
 function openModal(id) {
