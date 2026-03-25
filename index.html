@@ -1534,8 +1534,8 @@ function renderTodayWidget() {
   // 今週（日〜土）に支給日 or 開始日があるもの
   var weekReqs = allRequests.filter(function(r) {
     if (r.status === 'cancelled') return false;
-    var dateKey = r.payment_date || r.start_date || '';
-    return dateKey >= wsStr && dateKey <= weStr;
+    if (!r.payment_date) return false; // 支給日が設定されているもののみ
+    return r.payment_date >= wsStr && r.payment_date <= weStr;
   });
 
   function calcOffice(office) {
@@ -1586,8 +1586,8 @@ function showTodayDetail(office) {
 
   var todayReqs = allRequests.filter(function(r) {
     if (r.status === 'cancelled') return false;
-    var dateKey = r.payment_date || r.start_date || '';
-    if (dateKey < wsStr || dateKey > weStr) return false;
+    if (!r.payment_date) return false; // 支給日が設定されているもののみ
+    if (r.payment_date < wsStr || r.payment_date > weStr) return false;
     return !office || r.office === office;
   });
 
