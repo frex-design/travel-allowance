@@ -1515,13 +1515,13 @@ async function loadDashboard() {
 }
 
 function renderTodayWidget() {
-  // 来週の日曜〜土曜を計算
+  // 今週の日曜〜土曜を計算
   var today = new Date();
   var dow = today.getDay(); // 0=日, 6=土
   var weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - dow + 7); // 来週日曜
+  weekStart.setDate(today.getDate() - dow); // 今週日曜
   var weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6); // 来週土曜
+  weekEnd.setDate(weekStart.getDate() + 6); // 今週土曜
 
   var fmt2 = function(dt) {
     return dt.getFullYear() + '-' +
@@ -1577,8 +1577,8 @@ function renderTodayWidget() {
 function showTodayDetail(office) {
   var today = new Date();
   var dow = today.getDay();
-  var weekStart = new Date(today); weekStart.setDate(today.getDate() - dow + 7); // 来週日曜
-  var weekEnd   = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6); // 来週土曜
+  var weekStart = new Date(today); weekStart.setDate(today.getDate() - dow); // 今週日曜
+  var weekEnd   = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6); // 今週土曜
   var fmt2 = function(dt) {
     return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
   };
