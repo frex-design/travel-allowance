@@ -716,7 +716,7 @@
     <!-- 今日の支給 -->
     <div style="margin:20px 12px 0;border-top:1px solid var(--border);padding-top:16px">
       <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;padding:0 8px">
-        <div style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase">今日の支給</div>
+        <div style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase">今週の支給</div>
         <div id="today-date-label" style="font-size:10px;color:var(--text3)"></div>
       </div>
 
@@ -1094,7 +1094,7 @@
 <div class="modal-overlay" id="todayDetailModal">
   <div class="modal" style="max-width:560px">
     <div class="modal-header">
-      <div class="modal-title" id="todayDetailTitle">今日の支給詳細</div>
+      <div class="modal-title" id="todayDetailTitle">今週の支給詳細</div>
       <button class="modal-close" onclick="closeModal('todayDetailModal')">✕</button>
     </div>
     <div class="modal-body" id="todayDetailBody"></div>
@@ -1515,27 +1515,36 @@ async function loadDashboard() {
 }
 
 function renderTodayWidget() {
-  const today = (function() {
-    const t = new Date();
-    return t.getFullYear() + '-' +
-      String(t.getMonth()+1).padStart(2,'0') + '-' +
-      String(t.getDate()).padStart(2,'0');
-  })();
+  // 来週の日曜〜土曜を計算
+  var today = new Date();
+  var dow = today.getDay(); // 0=日, 6=土
+  var weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - dow + 7); // 来週日曜
+  var weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6); // 来週土曜
 
-  // 今日が支給日 OR 今日が出張開始日 のもの（pending・paid どちらも対象）
-  const todayReqs = allRequests.filter(function(r) {
+  var fmt2 = function(dt) {
+    return dt.getFullYear() + '-' +
+      String(dt.getMonth()+1).padStart(2,'0') + '-' +
+      String(dt.getDate()).padStart(2,'0');
+  };
+  var wsStr = fmt2(weekStart);
+  var weStr = fmt2(weekEnd);
+
+  // 今週（日〜土）に支給日 or 開始日があるもの
+  var weekReqs = allRequests.filter(function(r) {
     if (r.status === 'cancelled') return false;
-    if (r.payment_date) return r.payment_date === today;
-    return r.start_date === today;
+    var dateKey = r.payment_date || r.start_date || '';
+    return dateKey >= wsStr && dateKey <= weStr;
   });
 
   function calcOffice(office) {
-    const reqs = todayReqs.filter(function(r) {
+    var reqs = weekReqs.filter(function(r) {
       return !office || r.office === office;
     });
-    let total = 0, count = 0;
+    var total = 0, count = 0;
     reqs.forEach(function(r) {
-      const dets = allDetails.filter(function(d) {
+      var dets = allDetails.filter(function(d) {
         return d.request_id === r.id && !d.is_refunded;
       });
       total += dets.reduce(function(s,d){ return s + (d.allowance_amount||0); }, 0);
@@ -1544,40 +1553,48 @@ function renderTodayWidget() {
     return { total: total, count: count };
   }
 
-  const akita  = calcOffice('秋田事業所');
-  const yokote = calcOffice('横手事業所');
-  const all    = calcOffice('');
+  var akita  = calcOffice('秋田事業所');
+  var yokote = calcOffice('横手事業所');
+  var akitaTotal  = akita.total;
+  var yokoteTotal = yokote.total;
+  var allTotal    = akitaTotal + yokoteTotal;
 
-  const fmt = function(n) { return '¥' + n.toLocaleString(); };
+  var fmt = function(n) { return '¥' + n.toLocaleString(); };
 
-  document.getElementById('today-akita-amount').textContent  = fmt(akita.total);
+  document.getElementById('today-akita-amount').textContent  = fmt(akitaTotal);
   document.getElementById('today-akita-count').textContent   = akita.count + ' 名';
-  document.getElementById('today-yokote-amount').textContent = fmt(yokote.total);
+  document.getElementById('today-yokote-amount').textContent = fmt(yokoteTotal);
   document.getElementById('today-yokote-count').textContent  = yokote.count + ' 名';
-  document.getElementById('today-total-amount').textContent  = fmt(all.total);
+  document.getElementById('today-total-amount').textContent  = fmt(allTotal);
 
-  var _ymd = today.split('-'); var y=_ymd[0], m=_ymd[1], d=_ymd[2];
+  // 週の範囲を表示
+  var s = wsStr.split('-'), e = weStr.split('-');
   document.getElementById('today-date-label').textContent =
-    y + '年' + parseInt(m) + '月' + parseInt(d) + '日 時点';
+    parseInt(s[1]) + '/' + parseInt(s[2]) + ' 〜 ' +
+    parseInt(e[1]) + '/' + parseInt(e[2]);
 }
 
 function showTodayDetail(office) {
-  const td = new Date();
-  const today = td.getFullYear() + '-' +
-    String(td.getMonth()+1).padStart(2,'0') + '-' +
-    String(td.getDate()).padStart(2,'0');
+  var today = new Date();
+  var dow = today.getDay();
+  var weekStart = new Date(today); weekStart.setDate(today.getDate() - dow + 7); // 来週日曜
+  var weekEnd   = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6); // 来週土曜
+  var fmt2 = function(dt) {
+    return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+  };
+  var wsStr = fmt2(weekStart), weStr = fmt2(weekEnd);
 
-  const todayReqs = allRequests.filter(function(r) {
+  var todayReqs = allRequests.filter(function(r) {
     if (r.status === 'cancelled') return false;
-    const match = r.payment_date ? r.payment_date === today : r.start_date === today;
-    if (!match) return false;
+    var dateKey = r.payment_date || r.start_date || '';
+    if (dateKey < wsStr || dateKey > weStr) return false;
     return !office || r.office === office;
   });
 
-  const label = office || '全事業所';
-  const parts = today.split('-');
+  var label = office || '全事業所';
+  var s = wsStr.split('-'), e = weStr.split('-');
   document.getElementById('todayDetailTitle').textContent =
-    '今日の支給詳細 - ' + label + '(' + parts[0] + '年' + parseInt(parts[1]) + '月' + parseInt(parts[2]) + '日)';
+    '今週の支給詳細 - ' + label + '（' + parseInt(s[1]) + '/' + parseInt(s[2]) + ' 〜 ' + parseInt(e[1]) + '/' + parseInt(e[2]) + '）';
 
   const body = document.getElementById('todayDetailBody');
   body.innerHTML = '';
@@ -2972,27 +2989,27 @@ function printTodayDetail() {
 
   var win = window.open('', '_blank', 'width=700,height=800');
   win.document.write('<html><head><meta charset="UTF-8"><title>' + title + '</title><style>');
+  // 背景色を強制印刷するための指定
+  win.document.write('*{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important;}');
   win.document.write('body{font-family:sans-serif;font-size:13px;color:#222;padding:20px;margin:0}');
   win.document.write('h2{font-size:16px;font-weight:700;margin:0 0 16px;padding-bottom:10px;border-bottom:2px solid #b5601a;color:#b5601a}');
-  win.document.write('.card{border:1px solid #ddd;border-radius:6px;padding:12px;margin-bottom:12px}');
-  win.document.write('.card-title{font-weight:700;font-size:14px;margin-bottom:4px}');
-  win.document.write('.card-sub{font-size:11px;color:#888;margin-bottom:10px}');
+  win.document.write('div[style*="background:var(--surface2)"],div[style*="background:rgba(181"]{background:#f8f4f0 !important;border:1px solid #ddd !important;border-radius:6px;padding:12px;margin-bottom:12px}');
   win.document.write('table{width:100%;border-collapse:collapse;font-size:12px}');
-  win.document.write('th{background:#f5f5f5;padding:5px 10px;text-align:left;font-weight:600;font-size:11px;color:#666;border-top:1px solid #eee}');
+  win.document.write('thead tr{background:#f0ebe5 !important}');
+  win.document.write('th{background:#f0ebe5 !important;padding:5px 10px;text-align:left;font-weight:600;font-size:11px;color:#555;border-top:1px solid #ddd}');
   win.document.write('td{padding:6px 10px;border-top:1px solid #eee}');
-  win.document.write('.amt{font-weight:700;color:#2d6235}');
-  win.document.write('.footer{border-top:2px solid #ddd;margin-top:12px;padding-top:10px;display:flex;justify-content:space-between;align-items:center}');
-  win.document.write('.footer-label{font-weight:700}');
-  win.document.write('.footer-amt{font-size:18px;font-weight:700;color:#b5601a}');
-  win.document.write('.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}');
-  win.document.write('button{display:none}');
+  win.document.write('span[style*="color:var(--green)"],span[style*="color:#2d6235"]{color:#2d6235 !important;font-weight:700}');
+  win.document.write('span[style*="color:var(--accent)"],div[style*="color:var(--accent)"]{color:#b5601a !important;font-weight:700}');
+  win.document.write('div[style*="border-top:2px"]{border-top:2px solid #ccc !important;margin-top:12px;padding-top:10px;display:flex;justify-content:space-between;align-items:center}');
+  win.document.write('button{display:none !important}');
+  win.document.write('@media print{body{padding:10px}h2{margin-bottom:12px}}');
   win.document.write('</style></head><body>');
   win.document.write('<h2>' + title + '</h2>');
   win.document.write(body);
   win.document.write('</body></html>');
   win.document.close();
   win.focus();
-  setTimeout(function() { win.print(); }, 300);
+  setTimeout(function() { win.print(); }, 400);
 }
 
 function openModal(id) {
