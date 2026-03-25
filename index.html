@@ -1927,10 +1927,25 @@ function renderRequestsTable(tableId, reqs, simple) {
         <div style="display:flex;gap:4px">
           <button class="btn btn-ghost btn-sm" onclick="showDetail('${r.id}')">詳細</button>
           <button class="btn btn-ghost btn-sm" onclick="editRequest('${r.id}')">編集</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRequest('${r.id}', '${r.task_name}')">削除</button>
         </div>
       </td>
     </tr>`;
   }).join('');
+}
+
+
+async function deleteRequest(id, name) {
+  if (!confirm('「' + name + '」を削除しますか？\n\nこの操作は取り消せません。\n明細データも同時に削除されます。')) return;
+  // 明細を先に削除
+  var detRes = await sbDelete('travel_allowance_details?request_id=eq.' + id);
+  if (detRes.error) { toast('削除に失敗しました', 'error'); return; }
+  // 申請を削除
+  var res = await sbDelete('travel_requests?id=eq.' + id);
+  if (res.error) { toast('削除に失敗しました', 'error'); return; }
+  toast('「' + name + '」を削除しました', 'success');
+  loadDashboard();
+  loadRequests();
 }
 
 // ============================================================
