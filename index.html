@@ -1014,6 +1014,14 @@
       </div>
     </div>
     <div class="modal-footer">
+      <div style="display:flex;align-items:center;gap:8px;margin-right:auto">
+        <label style="font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap">ステータス</label>
+        <select id="fStatus" style="padding:5px 10px;font-size:12px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--text)">
+          <option value="pending">未支給</option>
+          <option value="paid">支給済</option>
+          <option value="cancelled">キャンセル</option>
+        </select>
+      </div>
       <button class="btn btn-ghost" onclick="closeModal('requestModal')">キャンセル</button>
       <button class="btn btn-primary" id="saveRequestBtn" onclick="saveRequest()">
         💾 保存する
@@ -2081,6 +2089,8 @@ function updateAmounts() {
 
   // 内訳表示
   const bdEl  = document.getElementById('amountBreakdown');
+  var fStatusEl = document.getElementById('fStatus');
+  if (fStatusEl) fStatusEl.value = 'pending';
   const bdRow = document.getElementById('amountBreakdownRow');
   const bd = calcBreakdown(travelType, start, end);
   if (bdEl && bd) {
@@ -2120,7 +2130,7 @@ async function openNewRequest() {
   openModal('requestModal');
   document.getElementById('requestModalTitle').textContent = '出張手当 新規登録';
   // フォームリセット
-  ['fOffice','fTaskId','fTaskName','fTravelType','fPaymentDate','fNotes'].forEach(function(id) {
+  ['fOffice','fTaskId','fTaskName','fTravelType','fPaymentDate','fNotes','fStatus'].forEach(function(id) {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -2135,6 +2145,8 @@ async function openNewRequest() {
   var pt = document.getElementById('payText');
   if (pt)  { pt.textContent  = '未設定'; pt.style.color = 'var(--text3)'; }
   document.getElementById('fPaymentDate').value = '';
+  var fStatusEl = document.getElementById('fStatus');
+  if (fStatusEl) fStatusEl.value = 'pending';
   const bdRow = document.getElementById('amountBreakdownRow');
   if (bdRow) bdRow.style.display = 'none';
   document.getElementById('membersBody').innerHTML = '';
@@ -2168,6 +2180,8 @@ async function editRequest(id) {
   document.getElementById('fTaskName').value = r.task_name || '';
   document.getElementById('fTravelType').value = r.travel_type || '';
   document.getElementById('fPaymentDate').value = r.payment_date || '';
+  var fStatus = document.getElementById('fStatus');
+  if (fStatus) fStatus.value = r.status || 'pending';
   document.getElementById('fNotes').value = r.notes || '';
   calStartDate = r.start_date;
   calEndDate   = r.end_date;
@@ -2538,11 +2552,13 @@ async function saveRequest() {
 
   let reqId = editingId;
   const office = document.getElementById('fOffice').value || null;
+  var fStatusSave = document.getElementById('fStatus');
+  var reqStatus = (fStatusSave ? fStatusSave.value : null) || 'pending';
   const reqData = {
     task_id: taskId, task_name: taskName, travel_type: travelType,
     office: office,
     start_date: calStartDate, end_date: endDate,
-    payment_date: paymentDate, notes: notes, status: 'pending'
+    payment_date: paymentDate, notes: notes, status: reqStatus
   };
 
   if (editingId) {
