@@ -2787,6 +2787,23 @@ async function toggleEmployee(id, isActive) {
   loadEmployees();
 }
 
+
+async function moveTask(index, direction) {
+  var newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= tasks.length) return;
+  // 配列内で入れ替え
+  var tmp = tasks[index];
+  tasks[index] = tasks[newIndex];
+  tasks[newIndex] = tmp;
+  // sort_orderを更新
+  var updates = [];
+  tasks.forEach(function(t, i) {
+    updates.push(sbPatch('business_tasks?id=eq.' + t.id, { sort_order: i }));
+  });
+  await Promise.all(updates);
+  await loadTasks();
+}
+
 async function moveEmployee(index, direction) {
   const newIndex = index + direction;
   if (newIndex < 0 || newIndex >= employees.length) return;
@@ -2814,7 +2831,7 @@ async function moveEmployee(index, direction) {
 // TASKS
 // ============================================================
 async function loadTasksData() {
-  const res = await sbGet('business_tasks?select=*&order=task_name.asc');
+  const res = await sbGet('business_tasks?select=*&order=sort_order.asc,task_name.asc');
   if (res.data) tasks = res.data;
 }
 
@@ -2829,6 +2846,7 @@ async function loadTasks() {
     <table style="width:100%;border-collapse:collapse">
       <thead>
         <tr style="background:var(--surface2)">
+          <th style="padding:9px 14px;font-size:11px;font-weight:600;color:var(--text3);text-align:left;letter-spacing:.5px;width:60px">順</th>
           <th style="padding:9px 14px;font-size:11px;font-weight:600;color:var(--text3);text-align:left;letter-spacing:.5px">業務名</th>
           <th style="padding:9px 14px;font-size:11px;font-weight:600;color:var(--text3);text-align:left;letter-spacing:.5px">説明</th>
           <th style="padding:9px 14px;font-size:11px;font-weight:600;color:var(--text3);text-align:left;letter-spacing:.5px">状態</th>
@@ -2836,9 +2854,15 @@ async function loadTasks() {
         </tr>
       </thead>
       <tbody>
-        ${tasks.map(function(t) { return `
+        ${tasks.map(function(t, i) { return `
           <tr style="border-top:1px solid var(--border);${!t.is_active ? 'opacity:.5' : ''}">
-            <td style="padding:10px 14px;font-weight:500">🔧 ${t.task_name}</td>
+            <td style="padding:6px 10px">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:13px;line-height:1" onclick="moveTask(${i}, -1)" ${i === 0 ? 'disabled style="opacity:.3;cursor:default"' : ''}>&#9650;</button>
+                <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:13px;line-height:1" onclick="moveTask(${i}, 1)" ${i === tasks.length-1 ? 'disabled style="opacity:.3;cursor:default"' : ''}>&#9660;</button>
+              </div>
+            </td>
+            <td style="padding:10px 14px;font-weight:500">&#128295; ${t.task_name}</td>
             <td style="padding:10px 14px;color:var(--text2);font-size:13px">${t.description || '—'}</td>
             <td style="padding:10px 14px">
               <span class="badge ${t.is_active ? 'badge-paid' : 'badge-cancelled'}">${t.is_active ? '有効' : '無効'}</span>
