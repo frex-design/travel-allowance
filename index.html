@@ -1113,6 +1113,95 @@
   </div>
 </div>
 
+
+<!-- ===== MODAL: 操作ガイド ===== -->
+<div class="modal-overlay" id="guideModal" style="display:none;align-items:flex-start;padding:20px 0;overflow-y:auto">
+  <div class="modal" style="max-width:860px;width:95%;margin:auto;max-height:none">
+    <div class="modal-header" style="position:sticky;top:0;background:var(--surface);z-index:1;border-bottom:1px solid var(--border)">
+      <div class="modal-title">操作ガイド &#8212; 出張手当管理システム</div>
+      <button class="modal-close" onclick="closeModal('guideModal')">&#x2715;</button>
+    </div>
+    <div class="modal-body" style="padding:28px;line-height:1.8">
+      <div style="background:rgba(181,96,26,.06);border-left:4px solid var(--accent);border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:28px">
+        <div style="font-weight:700;font-size:14px;color:var(--accent);margin-bottom:4px">このシステムについて</div>
+        <div style="font-size:13px;color:var(--text2)">株式会社フレックスデザインの出張手当を管理するシステムです。経理担当者が社員の出張手当の登録・支給管理・集計を行うために使用します。</div>
+      </div>
+      <div style="margin-bottom:32px">
+        <div style="font-size:15px;font-weight:700;border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">1. 画面構成</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:var(--surface2)">
+            <th style="padding:9px 14px;text-align:left;font-weight:600;color:var(--text2);width:150px">メニュー</th>
+            <th style="padding:9px 14px;text-align:left;font-weight:600;color:var(--text2)">内容</th>
+          </tr></thead>
+          <tbody>
+            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px;font-weight:600">出張手当一覧</td><td style="padding:9px 14px;color:var(--text2)">全申請の一覧表示。ステータス・事業所・月でフィルタリングできます。</td></tr>
+            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px;font-weight:600">ダッシュボード</td><td style="padding:9px 14px;color:var(--text2)">今月の支給合計・業務別集計・最近の申請を確認できます。</td></tr>
+            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px;font-weight:600">社員マスタ</td><td style="padding:9px 14px;color:var(--text2)">社員の登録・編集・有効化/無効化を管理します。</td></tr>
+            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px;font-weight:600">業務マスタ</td><td style="padding:9px 14px;color:var(--text2)">業務名（点検案件）の登録・編集を管理します。</td></tr>
+            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px;font-weight:600">今週の支給（左）</td><td style="padding:9px 14px;color:var(--text2)">今週（日&#12316;土）に支給日が設定されている手当の合計額を事業所別に表示します。クリックすると詳細が表示できます。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-bottom:32px">
+        <div style="font-size:15px;font-weight:700;border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">2. 出張手当の新規登録</div>
+        <ol style="font-size:13px;color:var(--text2);padding-left:20px;margin:0">
+          <li style="margin-bottom:10px">ヘッダーの <strong style="color:var(--accent)">+ 新規登録</strong> ボタンをクリックします。</li>
+          <li style="margin-bottom:10px"><strong>事業所</strong>（秋田・横手）を選択します。</li>
+          <li style="margin-bottom:10px"><strong>業務名</strong>をリストから選択します。</li>
+          <li style="margin-bottom:10px"><strong>出張タイプ</strong>を選択します。支給金額は自動計算されます。
+            <div style="background:var(--surface2);border-radius:6px;padding:10px 14px;margin-top:8px;font-size:12px">
+              <div>日帰り：¥1,500 x 日数</div>
+              <div>宿泊：¥1,500 + ¥3,000 x 泊数</div>
+              <div>夜勤：¥3,000 x 日数</div>
+            </div>
+          </li>
+          <li style="margin-bottom:10px"><strong>支給日</strong>をカレンダーから選択します。</li>
+          <li style="margin-bottom:10px"><strong>出張期間</strong>をカレンダーで選択します。開始日&#8594;終了日の順にクリックし「確定」を押します。</li>
+          <li style="margin-bottom:10px"><strong>出張メンバー</strong>を追加します。氏名を選択すると支給金額が自動入力されます。</li>
+          <li style="margin-bottom:10px"><strong>保存する</strong> ボタンをクリックして完了です。</li>
+        </ol>
+      </div>
+      <div style="margin-bottom:32px">
+        <div style="font-size:15px;font-weight:700;border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">3. ステータス管理</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:var(--surface2)">
+            <th style="padding:9px 14px;text-align:left;font-weight:600;color:var(--text2);width:100px">ステータス</th>
+            <th style="padding:9px 14px;text-align:left;font-weight:600;color:var(--text2)">意味・操作</th>
+          </tr></thead>
+          <tbody>
+            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px"><span style="background:rgba(245,158,11,.15);color:#92400e;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600">未支給</span></td><td style="padding:9px 14px;color:var(--text2)">申請済みだが未支給の状態。詳細画面の「支給済」ボタンで変更できます。</td></tr>
+            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px"><span style="background:rgba(34,197,94,.15);color:#166534;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600">支給済</span></td><td style="padding:9px 14px;color:var(--text2)">支給完了済みの状態。編集画面のフッターからステータスを変更できます。</td></tr>
+            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px"><span style="background:rgba(239,68,68,.15);color:#991b1b;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600">キャンセル</span></td><td style="padding:9px 14px;color:var(--text2)">申請をキャンセルした状態。集計から除外されます。</td></tr>
+          </tbody>
+        </table>
+        <div style="background:rgba(59,130,246,.06);border-radius:6px;padding:12px 16px;margin-top:12px;font-size:12px;color:var(--text2)">
+          ステータス変更：一覧の「編集」&#8594; フッター左の「ステータス」セレクト &#8594; 「保存する」
+        </div>
+      </div>
+      <div style="margin-bottom:32px">
+        <div style="font-size:15px;font-weight:700;border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">4. CSV出力・取込</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px"><strong>CSV出力：</strong>全データをCSVファイルでダウンロードします。Excelで開いて集計・印刷に活用できます。</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px"><strong>CSV取込：</strong>CSVファイルから一括でデータを登録できます。必須列は「業務名・出張タイプ・開始日」です。</div>
+        <div style="background:rgba(245,158,11,.08);border-radius:6px;padding:12px 16px;font-size:12px;color:var(--text2)">
+          注意：CSV取込は既存データに追記されます。同じデータを重複して取り込まないようご注意ください。
+        </div>
+      </div>
+      <div style="margin-bottom:32px">
+        <div style="font-size:15px;font-weight:700;border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">5. マスタ管理</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:10px"><strong>社員マスタ：</strong>社員の追加・編集・削除ができます。無効化すると新規登録時のメンバー選択肢から非表示になります。</div>
+        <div style="font-size:13px;color:var(--text2)"><strong>業務マスタ：</strong>橋梁・トンネル・道路標識等の点検業務名を管理します。無効化した業務は新規登録時の選択肢から非表示になります。</div>
+      </div>
+      <div>
+        <div style="font-size:15px;font-weight:700;border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">6. 印刷</div>
+        <div style="font-size:13px;color:var(--text2)">左サイドバーの「今週の支給」カードをクリック &#8594; ポップアップの「印刷」ボタンで今週の支給明細を印刷できます。</div>
+      </div>
+    </div>
+    <div class="modal-footer" style="position:sticky;bottom:0;background:var(--surface)">
+      <button class="btn btn-primary" onclick="closeModal('guideModal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ============================================================
 // 出張期間カレンダー（2ヶ月表示）
@@ -3014,125 +3103,6 @@ function printTodayDetail() {
   win.document.write('<h2>' + title + '</h2>');
   win.document.write(body);
   win.document.write('
-<!-- ===== MODAL: 操作ガイド ===== -->
-<div class="modal-overlay" id="guideModal" style="display:none;align-items:flex-start;padding:20px 0;overflow-y:auto">
-  <div class="modal" style="max-width:860px;width:95%;margin:auto;max-height:none">
-    <div class="modal-header" style="position:sticky;top:0;background:var(--surface);z-index:1;border-bottom:1px solid var(--border)">
-      <div class="modal-title">📖 操作ガイド — 出張手当管理システム</div>
-      <button class="modal-close" onclick="closeModal('guideModal')">✕</button>
-    </div>
-    <div class="modal-body" style="padding:28px;line-height:1.8">
-
-      <!-- 概要 -->
-      <div style="background:rgba(181,96,26,.06);border-left:4px solid var(--accent);border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:28px">
-        <div style="font-weight:700;font-size:14px;color:var(--accent);margin-bottom:4px">このシステムについて</div>
-        <div style="font-size:13px;color:var(--text2)">株式会社フレックスデザインの出張手当を管理するシステムです。経理担当者が社員の出張手当の登録・支給管理・集計を行うために使用します。</div>
-      </div>
-
-      <!-- セクション1: 基本操作 -->
-      <div style="margin-bottom:32px">
-        <div style="font-size:15px;font-weight:700;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">
-          🗂️ 1. 画面構成
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead>
-            <tr style="background:var(--surface2)">
-              <th style="padding:9px 14px;text-align:left;font-weight:600;color:var(--text2);width:140px">メニュー</th>
-              <th style="padding:9px 14px;text-align:left;font-weight:600;color:var(--text2)">内容</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px;font-weight:600">📋 出張手当一覧</td><td style="padding:9px 14px;color:var(--text2)">全申請の一覧表示。ステータス・事業所・月でフィルタリングできます。</td></tr>
-            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px;font-weight:600">📊 ダッシュボード</td><td style="padding:9px 14px;color:var(--text2)">今月の支給合計・業務別集計・最近の申請を確認できます。</td></tr>
-            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px;font-weight:600">👤 社員マスタ</td><td style="padding:9px 14px;color:var(--text2)">社員の登録・編集・有効化/無効化を管理します。</td></tr>
-            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px;font-weight:600">🔧 業務マスタ</td><td style="padding:9px 14px;color:var(--text2)">業務名（点検案件）の登録・編集を管理します。</td></tr>
-            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px;font-weight:600">今週の支給（左）</td><td style="padding:9px 14px;color:var(--text2)">今週（日〜土）に支給日が設定されている手当の合計額を事業所別に表示します。クリックすると詳細が表示できます。</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- セクション2: 新規登録 -->
-      <div style="margin-bottom:32px">
-        <div style="font-size:15px;font-weight:700;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">
-          ➕ 2. 出張手当の新規登録
-        </div>
-        <ol style="font-size:13px;color:var(--text2);padding-left:20px;margin:0">
-          <li style="margin-bottom:10px">ヘッダーの <strong style="color:var(--accent)">＋ 新規登録</strong> ボタンをクリックします。</li>
-          <li style="margin-bottom:10px"><strong>事業所</strong>（秋田・横手）を選択します。</li>
-          <li style="margin-bottom:10px"><strong>業務名</strong>をリストから選択します（業務マスタに登録済みのものが表示されます）。</li>
-          <li style="margin-bottom:10px"><strong>出張タイプ</strong>を選択します。支給金額は自動計算されます。
-            <div style="background:var(--surface2);border-radius:6px;padding:10px 14px;margin-top:8px;font-size:12px">
-              <div>🚗 <strong>日帰り</strong>：¥1,500 × 日数</div>
-              <div>🏨 <strong>宿泊</strong>：¥1,500 + ¥3,000 × 泊数</div>
-              <div>🌙 <strong>夜勤</strong>：¥3,000 × 日数</div>
-            </div>
-          </li>
-          <li style="margin-bottom:10px"><strong>支給日</strong>をカレンダーから選択します（後から変更可能）。</li>
-          <li style="margin-bottom:10px"><strong>出張期間</strong>をカレンダーで選択します。開始日→終了日の順にクリックし「確定」を押します。</li>
-          <li style="margin-bottom:10px"><strong>出張メンバー</strong>を追加します。氏名を選択すると支給金額が自動入力されます。</li>
-          <li style="margin-bottom:10px"><strong>💾 保存する</strong> ボタンをクリックして完了です。</li>
-        </ol>
-      </div>
-
-      <!-- セクション3: ステータス管理 -->
-      <div style="margin-bottom:32px">
-        <div style="font-size:15px;font-weight:700;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">
-          ✅ 3. ステータス管理
-        </div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:12px">ステータスは各申請の支給状況を表します。</div>
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead>
-            <tr style="background:var(--surface2)">
-              <th style="padding:9px 14px;text-align:left;font-weight:600;color:var(--text2);width:100px">ステータス</th>
-              <th style="padding:9px 14px;text-align:left;font-weight:600;color:var(--text2)">意味・操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px"><span style="background:rgba(245,158,11,.15);color:#92400e;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600">未支給</span></td><td style="padding:9px 14px;color:var(--text2)">申請済みだが未支給の状態。詳細画面の「✅ 支給済」ボタンで変更できます。</td></tr>
-            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px"><span style="background:rgba(34,197,94,.15);color:#166534;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600">支給済</span></td><td style="padding:9px 14px;color:var(--text2)">支給完了済みの状態。編集画面のフッターからステータスを変更できます。</td></tr>
-            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px"><span style="background:rgba(239,68,68,.15);color:#991b1b;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600">キャンセル</span></td><td style="padding:9px 14px;color:var(--text2)">申請をキャンセルした状態。集計から除外されます。</td></tr>
-          </tbody>
-        </table>
-        <div style="background:rgba(59,130,246,.06);border-radius:6px;padding:12px 16px;margin-top:12px;font-size:12px;color:var(--text2)">
-          💡 <strong>ステータス変更の方法：</strong>一覧の「編集」ボタン → 画面下部フッター左の「ステータス」セレクトから変更 → 「💾 保存する」
-        </div>
-      </div>
-
-      <!-- セクション4: CSV -->
-      <div style="margin-bottom:32px">
-        <div style="font-size:15px;font-weight:700;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">
-          📄 4. CSV出力・取込
-        </div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:12px"><strong style="color:var(--text)">📥 CSV出力：</strong>現在登録されているすべての出張手当データをCSVファイルでダウンロードします。Excelで開いて集計・印刷に活用できます。ファイル名は「出張手当_YYYYMMDD.csv」形式です。</div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:12px"><strong style="color:var(--text)">📤 CSV取込：</strong>CSVファイルから一括でデータを登録できます。必須列は「業務名・出張タイプ・開始日」です。取込前に確認ダイアログが表示されます。</div>
-        <div style="background:rgba(245,158,11,.08);border-radius:6px;padding:12px 16px;font-size:12px;color:var(--text2)">
-          ⚠️ CSV取込は既存データに追記されます。同じデータを重複して取り込まないようご注意ください。
-        </div>
-      </div>
-
-      <!-- セクション5: マスタ管理 -->
-      <div style="margin-bottom:32px">
-        <div style="font-size:15px;font-weight:700;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">
-          ⚙️ 5. マスタ管理
-        </div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:10px"><strong style="color:var(--text)">👤 社員マスタ：</strong>社員の追加・編集・削除ができます。無効化すると新規登録時のメンバー選択肢から非表示になります（過去データには影響しません）。▲▼ボタンで表示順を変更できます。</div>
-        <div style="font-size:13px;color:var(--text2);"><strong style="color:var(--text)">🔧 業務マスタ：</strong>橋梁・トンネル・道路標識等の点検業務名を管理します。無効化した業務は新規登録時の選択肢から非表示になります。</div>
-      </div>
-
-      <!-- セクション6: 印刷 -->
-      <div style="margin-bottom:16px">
-        <div style="font-size:15px;font-weight:700;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">
-          🖨️ 6. 印刷
-        </div>
-        <div style="font-size:13px;color:var(--text2)">左サイドバーの「今週の支給」カードをクリック → ポップアップの <strong>🖨️ 印刷</strong> ボタンで今週の支給明細を印刷できます。背景色も含めて印刷されます。</div>
-      </div>
-
-    </div>
-    <div class="modal-footer" style="position:sticky;bottom:0;background:var(--surface)">
-      <button class="btn btn-primary" onclick="closeModal('guideModal')">閉じる</button>
-    </div>
-  </div>
-</div>
 
 </body></html>');
   win.document.close();
@@ -3156,126 +3126,5 @@ function closeModal(id) {
   el.style.display = 'none';
 }
 </script>
-
-<!-- ===== MODAL: 操作ガイド ===== -->
-<div class="modal-overlay" id="guideModal" style="display:none;align-items:flex-start;padding:20px 0;overflow-y:auto">
-  <div class="modal" style="max-width:860px;width:95%;margin:auto;max-height:none">
-    <div class="modal-header" style="position:sticky;top:0;background:var(--surface);z-index:1;border-bottom:1px solid var(--border)">
-      <div class="modal-title">📖 操作ガイド — 出張手当管理システム</div>
-      <button class="modal-close" onclick="closeModal('guideModal')">✕</button>
-    </div>
-    <div class="modal-body" style="padding:28px;line-height:1.8">
-
-      <!-- 概要 -->
-      <div style="background:rgba(181,96,26,.06);border-left:4px solid var(--accent);border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:28px">
-        <div style="font-weight:700;font-size:14px;color:var(--accent);margin-bottom:4px">このシステムについて</div>
-        <div style="font-size:13px;color:var(--text2)">株式会社フレックスデザインの出張手当を管理するシステムです。経理担当者が社員の出張手当の登録・支給管理・集計を行うために使用します。</div>
-      </div>
-
-      <!-- セクション1: 基本操作 -->
-      <div style="margin-bottom:32px">
-        <div style="font-size:15px;font-weight:700;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">
-          🗂️ 1. 画面構成
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead>
-            <tr style="background:var(--surface2)">
-              <th style="padding:9px 14px;text-align:left;font-weight:600;color:var(--text2);width:140px">メニュー</th>
-              <th style="padding:9px 14px;text-align:left;font-weight:600;color:var(--text2)">内容</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px;font-weight:600">📋 出張手当一覧</td><td style="padding:9px 14px;color:var(--text2)">全申請の一覧表示。ステータス・事業所・月でフィルタリングできます。</td></tr>
-            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px;font-weight:600">📊 ダッシュボード</td><td style="padding:9px 14px;color:var(--text2)">今月の支給合計・業務別集計・最近の申請を確認できます。</td></tr>
-            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px;font-weight:600">👤 社員マスタ</td><td style="padding:9px 14px;color:var(--text2)">社員の登録・編集・有効化/無効化を管理します。</td></tr>
-            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px;font-weight:600">🔧 業務マスタ</td><td style="padding:9px 14px;color:var(--text2)">業務名（点検案件）の登録・編集を管理します。</td></tr>
-            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px;font-weight:600">今週の支給（左）</td><td style="padding:9px 14px;color:var(--text2)">今週（日〜土）に支給日が設定されている手当の合計額を事業所別に表示します。クリックすると詳細が表示できます。</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- セクション2: 新規登録 -->
-      <div style="margin-bottom:32px">
-        <div style="font-size:15px;font-weight:700;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">
-          ➕ 2. 出張手当の新規登録
-        </div>
-        <ol style="font-size:13px;color:var(--text2);padding-left:20px;margin:0">
-          <li style="margin-bottom:10px">ヘッダーの <strong style="color:var(--accent)">＋ 新規登録</strong> ボタンをクリックします。</li>
-          <li style="margin-bottom:10px"><strong>事業所</strong>（秋田・横手）を選択します。</li>
-          <li style="margin-bottom:10px"><strong>業務名</strong>をリストから選択します（業務マスタに登録済みのものが表示されます）。</li>
-          <li style="margin-bottom:10px"><strong>出張タイプ</strong>を選択します。支給金額は自動計算されます。
-            <div style="background:var(--surface2);border-radius:6px;padding:10px 14px;margin-top:8px;font-size:12px">
-              <div>🚗 <strong>日帰り</strong>：¥1,500 × 日数</div>
-              <div>🏨 <strong>宿泊</strong>：¥1,500 + ¥3,000 × 泊数</div>
-              <div>🌙 <strong>夜勤</strong>：¥3,000 × 日数</div>
-            </div>
-          </li>
-          <li style="margin-bottom:10px"><strong>支給日</strong>をカレンダーから選択します（後から変更可能）。</li>
-          <li style="margin-bottom:10px"><strong>出張期間</strong>をカレンダーで選択します。開始日→終了日の順にクリックし「確定」を押します。</li>
-          <li style="margin-bottom:10px"><strong>出張メンバー</strong>を追加します。氏名を選択すると支給金額が自動入力されます。</li>
-          <li style="margin-bottom:10px"><strong>💾 保存する</strong> ボタンをクリックして完了です。</li>
-        </ol>
-      </div>
-
-      <!-- セクション3: ステータス管理 -->
-      <div style="margin-bottom:32px">
-        <div style="font-size:15px;font-weight:700;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">
-          ✅ 3. ステータス管理
-        </div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:12px">ステータスは各申請の支給状況を表します。</div>
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead>
-            <tr style="background:var(--surface2)">
-              <th style="padding:9px 14px;text-align:left;font-weight:600;color:var(--text2);width:100px">ステータス</th>
-              <th style="padding:9px 14px;text-align:left;font-weight:600;color:var(--text2)">意味・操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px"><span style="background:rgba(245,158,11,.15);color:#92400e;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600">未支給</span></td><td style="padding:9px 14px;color:var(--text2)">申請済みだが未支給の状態。詳細画面の「✅ 支給済」ボタンで変更できます。</td></tr>
-            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px"><span style="background:rgba(34,197,94,.15);color:#166534;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600">支給済</span></td><td style="padding:9px 14px;color:var(--text2)">支給完了済みの状態。編集画面のフッターからステータスを変更できます。</td></tr>
-            <tr style="border-top:1px solid var(--border)"><td style="padding:9px 14px"><span style="background:rgba(239,68,68,.15);color:#991b1b;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600">キャンセル</span></td><td style="padding:9px 14px;color:var(--text2)">申請をキャンセルした状態。集計から除外されます。</td></tr>
-          </tbody>
-        </table>
-        <div style="background:rgba(59,130,246,.06);border-radius:6px;padding:12px 16px;margin-top:12px;font-size:12px;color:var(--text2)">
-          💡 <strong>ステータス変更の方法：</strong>一覧の「編集」ボタン → 画面下部フッター左の「ステータス」セレクトから変更 → 「💾 保存する」
-        </div>
-      </div>
-
-      <!-- セクション4: CSV -->
-      <div style="margin-bottom:32px">
-        <div style="font-size:15px;font-weight:700;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">
-          📄 4. CSV出力・取込
-        </div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:12px"><strong style="color:var(--text)">📥 CSV出力：</strong>現在登録されているすべての出張手当データをCSVファイルでダウンロードします。Excelで開いて集計・印刷に活用できます。ファイル名は「出張手当_YYYYMMDD.csv」形式です。</div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:12px"><strong style="color:var(--text)">📤 CSV取込：</strong>CSVファイルから一括でデータを登録できます。必須列は「業務名・出張タイプ・開始日」です。取込前に確認ダイアログが表示されます。</div>
-        <div style="background:rgba(245,158,11,.08);border-radius:6px;padding:12px 16px;font-size:12px;color:var(--text2)">
-          ⚠️ CSV取込は既存データに追記されます。同じデータを重複して取り込まないようご注意ください。
-        </div>
-      </div>
-
-      <!-- セクション5: マスタ管理 -->
-      <div style="margin-bottom:32px">
-        <div style="font-size:15px;font-weight:700;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">
-          ⚙️ 5. マスタ管理
-        </div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:10px"><strong style="color:var(--text)">👤 社員マスタ：</strong>社員の追加・編集・削除ができます。無効化すると新規登録時のメンバー選択肢から非表示になります（過去データには影響しません）。▲▼ボタンで表示順を変更できます。</div>
-        <div style="font-size:13px;color:var(--text2);"><strong style="color:var(--text)">🔧 業務マスタ：</strong>橋梁・トンネル・道路標識等の点検業務名を管理します。無効化した業務は新規登録時の選択肢から非表示になります。</div>
-      </div>
-
-      <!-- セクション6: 印刷 -->
-      <div style="margin-bottom:16px">
-        <div style="font-size:15px;font-weight:700;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:8px;margin-bottom:16px">
-          🖨️ 6. 印刷
-        </div>
-        <div style="font-size:13px;color:var(--text2)">左サイドバーの「今週の支給」カードをクリック → ポップアップの <strong>🖨️ 印刷</strong> ボタンで今週の支給明細を印刷できます。背景色も含めて印刷されます。</div>
-      </div>
-
-    </div>
-    <div class="modal-footer" style="position:sticky;bottom:0;background:var(--surface)">
-      <button class="btn btn-primary" onclick="closeModal('guideModal')">閉じる</button>
-    </div>
-  </div>
-</div>
-
 </body>
 </html>
