@@ -1044,6 +1044,57 @@
   </div>
 </div>
 
+<!-- ===== MODAL: 返還処理 ===== -->
+<div class="modal-overlay" id="refundModal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div class="modal-title">💰 返還処理</div>
+      <button class="modal-close" onclick="closeModal('refundModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--surface2);border-radius:8px;padding:14px;margin-bottom:16px">
+        <div style="font-size:11px;color:var(--text3);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">対象メンバー</div>
+        <div style="font-size:15px;font-weight:700" id="refundEmpName">—</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px">
+        <div style="background:var(--surface2);border-radius:6px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">支給額</div>
+          <div style="font-family:var(--mono);font-weight:700;font-size:14px;color:var(--green)" id="refundGrossAmt">¥0</div>
+        </div>
+        <div style="background:rgba(184,64,64,.08);border:1px solid rgba(184,64,64,.15);border-radius:6px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">返還済</div>
+          <div style="font-family:var(--mono);font-weight:700;font-size:14px;color:var(--red)" id="refundAlreadyAmt">¥0</div>
+        </div>
+        <div style="background:rgba(181,96,26,.08);border:1px solid rgba(181,96,26,.18);border-radius:6px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">返還可能残額</div>
+          <div style="font-family:var(--mono);font-weight:700;font-size:14px;color:var(--accent)" id="refundRemainingAmt">¥0</div>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <label>返還金額 *</label>
+        <input type="number" id="refundAmount" min="1" placeholder="0" oninput="onRefundAmountChange()"
+          style="font-family:var(--mono);font-size:18px;font-weight:700;text-align:right" />
+        <div style="margin-top:10px;padding:12px 16px;background:var(--surface2);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;color:var(--text3)">返還後 実支給額</span>
+          <span style="font-family:var(--mono);font-weight:700;font-size:18px;color:var(--green)" id="refundNetDisplay">¥0</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>理由（任意）</label>
+        <input type="text" id="refundReason" placeholder="返還理由を入力" />
+      </div>
+      <input type="hidden" id="refundDetailId" />
+      <input type="hidden" id="refundReqId" />
+      <input type="hidden" id="refundMaxAmount" />
+      <input type="hidden" id="refundGrossAmount" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('refundModal')">キャンセル</button>
+      <button class="btn btn-danger" id="submitRefundBtn" onclick="submitRefund()">💸 返還実行</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL: 社員追加・編集 ===== -->
 <div class="modal-overlay" id="employeeModal">
   <div class="modal" style="max-width:400px">
@@ -1482,6 +1533,7 @@ function sbDelete(path) { return sb('DELETE', path); }
 // ============================================================
 let allRequests = [];
 let allDetails = [];
+let allRefundLogs = [];
 let employees = [];
 let tasks = [];
 let currentStatus = 'all';
@@ -1542,10 +1594,12 @@ async function loadDashboard() {
   try {
     var _pAll = await Promise.all([
       sbGet('travel_requests?select=*&order=created_at.desc'),
-      sbGet('travel_allowance_details?select=*')
-    ]); var reqRes=_pAll[0], detRes=_pAll[1];
+      sbGet('travel_allowance_details?select=*'),
+      sbGet('refund_logs?select=*&order=created_at.asc')
+    ]); var reqRes=_pAll[0], detRes=_pAll[1], logRes=_pAll[2];
     if (reqRes.data) allRequests = reqRes.data;
     if (detRes.data) allDetails = detRes.data;
+    if (logRes.data) allRefundLogs = logRes.data;
 
     // 事業所フィルター
     const officeReqs = currentOfficeDash === 'all'
@@ -1559,16 +1613,18 @@ async function loadDashboard() {
       return dateKey.startsWith(month);
     });
     const monthlyTotal = monthlyReqs.reduce(function(s, r) {
-      const dets = allDetails.filter(function(d) { return d.request_id === r.id && !d.is_refunded; });
-      return s + dets.reduce(function(a, d) { return a + (d.allowance_amount || 0); }, 0);
+      const dets = allDetails.filter(function(d) { return d.request_id === r.id; });
+      return s + dets.reduce(function(a, d) { return a + ((d.allowance_amount || 0) - (d.refunded_total || 0)); }, 0);
     }, 0);
 
     const paidCount    = officeReqs.filter(function(r) { return r.status === 'paid'; }).length;
     const pendingCount = officeReqs.filter(function(r) { return r.status === 'pending'; }).length;
     const officeIds    = officeReqs.map(function(r) { return r.id; });
-    const refundedTotal = allDetails
-      .filter(function(d) { return d.is_refunded && officeIds.includes(d.request_id); })
-      .reduce(function(s, d) { return s + (d.allowance_amount || 0); }, 0);
+    const refundedTotal = allRefundLogs
+      .filter(function(l) {
+        return allDetails.some(function(d) { return d.id === l.detail_id && officeIds.includes(d.request_id); });
+      })
+      .reduce(function(s, l) { return s + (l.refund_amount || 0); }, 0);
 
     document.getElementById('stat-monthly').textContent  = `¥${monthlyTotal.toLocaleString()}`;
     document.getElementById('stat-paid').textContent     = paidCount;
@@ -1618,9 +1674,9 @@ function renderTodayWidget() {
     var total = 0, count = 0;
     reqs.forEach(function(r) {
       var dets = allDetails.filter(function(d) {
-        return d.request_id === r.id && !d.is_refunded;
+        return d.request_id === r.id;
       });
-      total += dets.reduce(function(s,d){ return s + (d.allowance_amount||0); }, 0);
+      total += dets.reduce(function(s,d){ return s + ((d.allowance_amount||0) - (d.refunded_total||0)); }, 0);
       count += dets.length;
     });
     return { total: total, count: count };
@@ -1686,9 +1742,9 @@ function showTodayDetail(office) {
 
   todayReqs.forEach(function(r) {
     const dets = allDetails.filter(function(d) {
-      return d.request_id === r.id && !d.is_refunded;
+      return d.request_id === r.id;
     });
-    const total = dets.reduce(function(s,d){ return s + (d.allowance_amount||0); }, 0);
+    const total = dets.reduce(function(s,d){ return s + ((d.allowance_amount||0) - (d.refunded_total||0)); }, 0);
     totalAll += total;
 
     const card = document.createElement('div');
@@ -1822,8 +1878,8 @@ function renderTaskSummary(reqs) {
   reqs.forEach(function(r) {
     const key = r.task_name || '（未設定）';
     if (!map[key]) map[key] = { count: 0, members: 0, paid: 0, pending: 0 };
-    const dets = allDetails.filter(function(d) { return d.request_id === r.id && !d.is_refunded; });
-    const total = dets.reduce(function(s, d) { return s + (d.allowance_amount || 0); }, 0);
+    const dets = allDetails.filter(function(d) { return d.request_id === r.id; });
+    const total = dets.reduce(function(s, d) { return s + ((d.allowance_amount || 0) - (d.refunded_total || 0)); }, 0);
     map[key].count++;
     map[key].members += dets.length;
     if (r.status === 'paid')    map[key].paid    += total;
@@ -1871,10 +1927,12 @@ function renderTaskSummary(reqs) {
 async function loadRequests() {
   var _pAll = await Promise.all([
     sbGet('travel_requests?select=*&order=created_at.desc'),
-    sbGet('travel_allowance_details?select=*')
-  ]); var reqRes=_pAll[0], detRes=_pAll[1];
+    sbGet('travel_allowance_details?select=*'),
+    sbGet('refund_logs?select=*&order=created_at.asc')
+  ]); var reqRes=_pAll[0], detRes=_pAll[1], logRes=_pAll[2];
   if (reqRes.data) allRequests = reqRes.data;
   if (detRes.data) allDetails = detRes.data;
+  if (logRes.data) allRefundLogs = logRes.data;
   buildMonthFilter();
   applySearch();
 }
@@ -1955,8 +2013,8 @@ function renderRequestsTable(tableId, reqs, simple) {
   }
   tbody.innerHTML = reqs.map(function(r) {
     const dets = allDetails.filter(function(d) { return d.request_id === r.id; });
-    const total = dets.filter(function(d) { return !d.is_refunded; }).reduce(function(s, d) { return s + d.allowance_amount; }, 0);
-    const refunded = dets.filter(function(d) { return d.is_refunded; }).reduce(function(s, d) { return s + d.allowance_amount; }, 0);
+    const refunded = dets.reduce(function(s, d) { return s + (d.refunded_total || 0); }, 0);
+    const total = dets.reduce(function(s, d) { return s + (d.allowance_amount || 0); }, 0) - refunded;
     const typeLabel = { day_trip:'🚗 日帰り', overnight:'🏨 宿泊', night_shift:'🌙 夜勤' }[r.travel_type] || r.travel_type;
     const typeBadge = { day_trip:'badge-day', overnight:'badge-overnight', night_shift:'badge-night' }[r.travel_type] || '';
     const period = r.start_date === r.end_date ? r.start_date : `${r.start_date} 〜 ${r.end_date}`;
@@ -2028,8 +2086,9 @@ async function showDetail(id) {
   const r = allRequests.filter(function(x){ return x.id === id; })[0];
   if (!r) return;
   const dets = allDetails.filter(function(d) { return d.request_id === id; });
-  const total = dets.reduce(function(s, d) { return s + d.allowance_amount; }, 0);
-  const refunded = dets.filter(function(d) { return d.is_refunded; }).reduce(function(s, d) { return s + d.allowance_amount; }, 0);
+  const totalGross = dets.reduce(function(s, d) { return s + (d.allowance_amount || 0); }, 0);
+  const refunded = dets.reduce(function(s, d) { return s + (d.refunded_total || 0); }, 0);
+  const total = totalGross - refunded;
   const typeLabel = { day_trip:'🚗 日帰り', overnight:'🏨 宿泊', night_shift:'🌙 夜勤' }[r.travel_type] || r.travel_type;
   const statusMap = { pending: ['badge-pending','未支給'], paid: ['badge-paid','支給済'], cancelled: ['badge-cancelled','キャンセル'], refunded: ['badge-refunded','返還済'] };
   var _ss = statusMap[r.status] || ['','']; var sc=_ss[0], sl=_ss[1];
@@ -2062,7 +2121,8 @@ async function showDetail(id) {
       </div>
       <div class="detail-section">
         <div class="detail-label">支給合計</div>
-        <div class="amount-big">¥${(total - refunded).toLocaleString()}</div>
+        <div class="amount-big">¥${total.toLocaleString()}</div>
+        ${refunded > 0 ? `<div style="font-size:12px;color:var(--red);margin-top:3px">返還済 -¥${refunded.toLocaleString()} ／ 元 ¥${totalGross.toLocaleString()}</div>` : ''}
       </div>
     </div>
     ${r.notes ? `<div class="detail-section"><div class="detail-label">備考</div><div class="detail-value">${r.notes}</div></div>` : ''}
@@ -2072,22 +2132,48 @@ async function showDetail(id) {
         <thead><tr style="background:var(--surface2)">
           <th style="padding:8px 12px;font-size:11px;color:var(--text3);text-align:left;font-weight:600;letter-spacing:.5px;text-transform:uppercase">氏名</th>
           <th style="padding:8px 12px;font-size:11px;color:var(--text3);text-align:left;font-weight:600;letter-spacing:.5px;text-transform:uppercase">支給額</th>
-          <th style="padding:8px 12px;font-size:11px;color:var(--text3);text-align:left;font-weight:600;letter-spacing:.5px;text-transform:uppercase">ステータス</th>
+          <th style="padding:8px 12px;font-size:11px;color:var(--text3);text-align:left;font-weight:600;letter-spacing:.5px;text-transform:uppercase">返還済</th>
+          <th style="padding:8px 12px;font-size:11px;color:var(--text3);text-align:left;font-weight:600;letter-spacing:.5px;text-transform:uppercase">実支給額</th>
+          <th style="padding:8px 12px;font-size:11px;color:var(--text3);text-align:left;font-weight:600;letter-spacing:.5px;text-transform:uppercase">操作</th>
         </tr></thead>
         <tbody>
-          ${dets.map(function(d) { return `<tr>
-            <td style="padding:10px 12px;border-top:1px solid var(--border);font-weight:500">${d.employee_name}</td>
-            <td style="padding:10px 12px;border-top:1px solid var(--border);font-family:var(--mono);font-weight:600;color:${d.is_refunded?'var(--red)':'var(--green)'}">
-              ${d.is_refunded ? `<s>¥${d.allowance_amount.toLocaleString()}</s>` : `¥${d.allowance_amount.toLocaleString()}`}
-            </td>
-            <td style="padding:10px 12px;border-top:1px solid var(--border)">
-              ${d.is_refunded
-                ? `<span class="badge badge-refunded">返還済 (${d.refund_date||''})</span>`
-                : `<span class="badge badge-paid">支給</span>
-                   <button class="btn btn-danger btn-sm" style="margin-left:6px" onclick="markRefund('${d.id}','${r.id}')">返還処理</button>`
-              }
-            </td>
-          </tr>`; }).join('')}
+          ${dets.map(function(d) {
+            const logs = allRefundLogs.filter(function(l) { return l.detail_id === d.id; });
+            const refAmt = d.refunded_total || 0;
+            const netAmt = (d.allowance_amount || 0) - refAmt;
+            const isFullyRefunded = d.is_refunded;
+            const isPartial = !isFullyRefunded && refAmt > 0;
+            const historyRows = logs.length > 0 ? `<tr>
+              <td colspan="5" style="padding:4px 12px 12px 32px;border-top:none;background:rgba(184,64,64,.04)">
+                <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">返還履歴</div>
+                <table style="width:100%;border-collapse:collapse">
+                  ${logs.map(function(l) { return `<tr>
+                    <td style="padding:3px 0;font-size:11px;color:var(--text2);width:100px">${l.refund_date}</td>
+                    <td style="padding:3px 8px;font-family:var(--mono);font-size:11px;color:var(--red);font-weight:600">-¥${(l.refund_amount||0).toLocaleString()}</td>
+                    <td style="padding:3px 0;font-size:11px;color:var(--text3)">${l.refund_reason || '—'}</td>
+                  </tr>`; }).join('')}
+                </table>
+              </td>
+            </tr>` : '';
+            return `<tr>
+              <td style="padding:10px 12px;border-top:1px solid var(--border);font-weight:500">${d.employee_name}</td>
+              <td style="padding:10px 12px;border-top:1px solid var(--border);font-family:var(--mono);font-weight:600;color:var(--green)">¥${(d.allowance_amount||0).toLocaleString()}</td>
+              <td style="padding:10px 12px;border-top:1px solid var(--border);font-family:var(--mono);font-weight:600;color:var(--red)">${refAmt > 0 ? '-¥' + refAmt.toLocaleString() : '—'}</td>
+              <td style="padding:10px 12px;border-top:1px solid var(--border);font-family:var(--mono);font-weight:700;color:${isFullyRefunded ? 'var(--red)' : isPartial ? 'var(--amber)' : 'var(--green)'}">
+                ${isFullyRefunded ? '<s>¥0</s>' : '¥' + netAmt.toLocaleString()}
+              </td>
+              <td style="padding:10px 12px;border-top:1px solid var(--border)">
+                ${isFullyRefunded
+                  ? `<span class="badge badge-refunded">全額返還済</span>`
+                  : isPartial
+                    ? `<span class="badge badge-pending" style="font-size:10px">一部返還</span>
+                       <button class="btn btn-danger btn-sm" style="margin-left:6px" onclick="openRefundModal('${d.id}','${r.id}')">返還処理</button>`
+                    : `<span class="badge badge-paid">支給</span>
+                       <button class="btn btn-danger btn-sm" style="margin-left:6px" onclick="openRefundModal('${d.id}','${r.id}')">返還処理</button>`
+                }
+              </td>
+            </tr>${historyRows}`;
+          }).join('')}
         </tbody>
       </table>
     </div>
@@ -2106,14 +2192,85 @@ async function showDetail(id) {
   openModal('detailModal');
 }
 
-async function markRefund(detId, reqId) {
-  const reason = prompt('返還理由を入力してください（任意）') || '';
+function openRefundModal(detId, reqId) {
+  const d = allDetails.filter(function(x){ return x.id === detId; })[0];
+  if (!d) return;
+  const refAmt = d.refunded_total || 0;
+  const remaining = (d.allowance_amount || 0) - refAmt;
+
+  document.getElementById('refundEmpName').textContent = d.employee_name;
+  document.getElementById('refundGrossAmt').textContent = '¥' + (d.allowance_amount||0).toLocaleString();
+  document.getElementById('refundAlreadyAmt').textContent = refAmt > 0 ? '-¥' + refAmt.toLocaleString() : '¥0';
+  document.getElementById('refundRemainingAmt').textContent = '¥' + remaining.toLocaleString();
+  document.getElementById('refundAmount').value = remaining;
+  document.getElementById('refundAmount').max = remaining;
+  document.getElementById('refundReason').value = '';
+  document.getElementById('refundDetailId').value = detId;
+  document.getElementById('refundReqId').value = reqId;
+  document.getElementById('refundMaxAmount').value = remaining;
+  document.getElementById('refundGrossAmount').value = d.allowance_amount || 0;
+
+  onRefundAmountChange();
+  openModal('refundModal');
+}
+
+function onRefundAmountChange() {
+  const gross = parseInt(document.getElementById('refundGrossAmount').value) || 0;
+  const max   = parseInt(document.getElementById('refundMaxAmount').value) || 0;
+  const already = gross - max;
+  let val = parseInt(document.getElementById('refundAmount').value) || 0;
+  if (val > max) { val = max; document.getElementById('refundAmount').value = max; }
+  if (val < 0)   { val = 0;   document.getElementById('refundAmount').value = 0; }
+  const net = gross - already - val;
+  document.getElementById('refundNetDisplay').textContent = '¥' + Math.max(0, net).toLocaleString();
+}
+
+async function submitRefund() {
+  const detId       = document.getElementById('refundDetailId').value;
+  const reqId       = document.getElementById('refundReqId').value;
+  const refundAmount = parseInt(document.getElementById('refundAmount').value) || 0;
+  const reason      = document.getElementById('refundReason').value.trim() || null;
+  const max         = parseInt(document.getElementById('refundMaxAmount').value) || 0;
+  const gross       = parseInt(document.getElementById('refundGrossAmount').value) || 0;
+
+  if (refundAmount <= 0) { toast('返還金額を入力してください', 'error'); return; }
+  if (refundAmount > max) { toast('返還金額が残額を超えています', 'error'); return; }
+
   const today = new Date().toISOString().split('T')[0];
-  const res = await sbPatch(`travel_allowance_details?id=eq.${detId}`, {
-    is_refunded: true, refund_date: today, refund_reason: reason
+  const btn = document.getElementById('submitRefundBtn');
+  btn.disabled = true; btn.textContent = '処理中...';
+
+  // 1. refund_logs に追加
+  const logRes = await sbPost('refund_logs', {
+    detail_id: detId,
+    refund_amount: refundAmount,
+    refund_date: today,
+    refund_reason: reason
   });
-  if (res.error) { toast('エラーが発生しました', 'error'); return; }
-  toast('返還処理を完了しました', 'success');
+  if (logRes.error) {
+    toast('エラーが発生しました', 'error');
+    btn.disabled = false; btn.innerHTML = '💸 返還実行'; return;
+  }
+
+  // 2. travel_allowance_details を更新
+  const d = allDetails.filter(function(x){ return x.id === detId; })[0];
+  const newRefundedTotal = (d ? (d.refunded_total || 0) : 0) + refundAmount;
+  const isFullyRefunded  = newRefundedTotal >= gross;
+  const patchData = { refunded_total: newRefundedTotal };
+  if (isFullyRefunded) {
+    patchData.is_refunded   = true;
+    patchData.refund_date   = today;
+    patchData.refund_reason = reason;
+  }
+  const patchRes = await sbPatch('travel_allowance_details?id=eq.' + detId, patchData);
+  if (patchRes.error) {
+    toast('エラーが発生しました', 'error');
+    btn.disabled = false; btn.innerHTML = '💸 返還実行'; return;
+  }
+
+  toast(isFullyRefunded ? '全額返還処理を完了しました ✅' : '一部返還処理を完了しました ✅', 'success');
+  closeModal('refundModal');
+  btn.disabled = false; btn.innerHTML = '💸 返還実行';
   await loadRequests();
   await showDetail(reqId);
 }
