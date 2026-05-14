@@ -455,7 +455,7 @@
   .amount-big { font-size: 28px; font-weight: 700; font-family: var(--mono); color: var(--green); }
 
   /* ===== TOAST ===== */
-  .toast-container { position: fixed; top: 70px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; }
+  .toast-container { position: fixed; top: 70px; right: 20px; z-index: 99999; display: flex; flex-direction: column; gap: 8px; }
   .toast {
     background: #ffffff;
     border: 1px solid var(--border);
@@ -2245,16 +2245,25 @@ async function submitRefund() {
   const btn = document.getElementById('submitRefundBtn');
   btn.disabled = true; btn.textContent = '処理中...';
 
+  function resetBtn() { btn.disabled = false; btn.innerHTML = '💸 返還実行'; }
+
   // 1. refund_logs に追加
-  const logRes = await sbPost('refund_logs', {
-    detail_id: detId,
-    refund_amount: refundAmount,
-    refund_date: today,
-    refund_reason: reason
-  });
+  let logRes;
+  try {
+    logRes = await sbPost('refund_logs', {
+      detail_id: detId,
+      refund_amount: refundAmount,
+      refund_date: today,
+      refund_reason: reason
+    });
+  } catch(e) {
+    toast('通信エラー: ' + e.message, 'error');
+    resetBtn(); return;
+  }
   if (logRes.error) {
-    toast('エラーが発生しました', 'error');
-    btn.disabled = false; btn.innerHTML = '💸 返還実行'; return;
+    const msg = (logRes.error && logRes.error.message) ? logRes.error.message : JSON.stringify(logRes.error);
+    toast('返還履歴の保存に失敗: ' + msg, 'error');
+    resetBtn(); return;
   }
 
   // 2. travel_allowance_details を更新
@@ -2267,15 +2276,22 @@ async function submitRefund() {
     patchData.refund_date   = today;
     patchData.refund_reason = reason;
   }
-  const patchRes = await sbPatch('travel_allowance_details?id=eq.' + detId, patchData);
+  let patchRes;
+  try {
+    patchRes = await sbPatch('travel_allowance_details?id=eq.' + detId, patchData);
+  } catch(e) {
+    toast('通信エラー: ' + e.message, 'error');
+    resetBtn(); return;
+  }
   if (patchRes.error) {
-    toast('エラーが発生しました', 'error');
-    btn.disabled = false; btn.innerHTML = '💸 返還実行'; return;
+    const msg = (patchRes.error && patchRes.error.message) ? patchRes.error.message : JSON.stringify(patchRes.error);
+    toast('明細の更新に失敗: ' + msg, 'error');
+    resetBtn(); return;
   }
 
   toast(isFullyRefunded ? '全額返還処理を完了しました ✅' : '一部返還処理を完了しました ✅', 'success');
   closeModal('refundModal');
-  btn.disabled = false; btn.innerHTML = '💸 返還実行';
+  resetBtn();
   await loadRequests();
   await showDetail(reqId);
 }
