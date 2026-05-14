@@ -1100,6 +1100,39 @@
   </div>
 </div>
 
+<!-- ===== MODAL: 返還履歴 編集 ===== -->
+<div class="modal-overlay" id="refundEditModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title">✏️ 返還履歴 編集</div>
+      <button class="modal-close" onclick="closeModal('refundEditModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:14px">
+        <label>返還金額</label>
+        <input type="number" id="editRefundAmount"
+          style="font-family:var(--mono);font-size:16px;font-weight:700;text-align:right" />
+      </div>
+      <div class="form-group" style="margin-bottom:14px">
+        <label>返還日</label>
+        <input type="date" id="editRefundDate" />
+      </div>
+      <div class="form-group">
+        <label>理由（任意）</label>
+        <input type="text" id="editRefundReason" placeholder="返還理由を入力" />
+      </div>
+      <input type="hidden" id="editRefundLogId" />
+      <input type="hidden" id="editRefundDetId" />
+      <input type="hidden" id="editRefundReqId" />
+      <input type="hidden" id="editRefundMaxAmount" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('refundEditModal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveRefundEdit()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL: 社員追加・編集 ===== -->
 <div class="modal-overlay" id="employeeModal">
   <div class="modal" style="max-width:400px">
@@ -2153,9 +2186,13 @@ async function showDetail(id) {
                 <div style="font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">返還履歴</div>
                 <table style="width:100%;border-collapse:collapse">
                   ${logs.map(function(l) { return `<tr>
-                    <td style="padding:3px 0;font-size:11px;color:var(--text2);width:100px">${l.refund_date}</td>
-                    <td style="padding:3px 8px;font-family:var(--mono);font-size:11px;color:var(--red);font-weight:600">-¥${(l.refund_amount||0).toLocaleString()}</td>
-                    <td style="padding:3px 0;font-size:11px;color:var(--text3)">${l.refund_reason || '—'}</td>
+                    <td style="padding:4px 0;font-size:11px;color:var(--text2);width:90px">${l.refund_date}</td>
+                    <td style="padding:4px 8px;font-family:var(--mono);font-size:11px;color:var(--red);font-weight:600">-¥${(l.refund_amount||0).toLocaleString()}</td>
+                    <td style="padding:4px 0;font-size:11px;color:var(--text3);flex:1">${l.refund_reason || '—'}</td>
+                    <td style="padding:4px 0;text-align:right;white-space:nowrap">
+                      <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:11px" onclick="openRefundEdit('${l.id}','${d.id}','${r.id}')">✏️</button>
+                      <button class="btn btn-danger btn-sm" style="padding:2px 7px;font-size:11px;margin-left:4px" onclick="deleteRefundLog('${l.id}','${d.id}','${r.id}')">🗑</button>
+                    </td>
                   </tr>`; }).join('')}
                 </table>
               </td>
@@ -2292,6 +2329,81 @@ async function submitRefund() {
   toast(isFullyRefunded ? '全額返還処理を完了しました ✅' : '一部返還処理を完了しました ✅', 'success');
   closeModal('refundModal');
   resetBtn();
+  await loadRequests();
+  await showDetail(reqId);
+}
+
+function openRefundEdit(logId, detId, reqId) {
+  const log = allRefundLogs.filter(function(l){ return l.id === logId; })[0];
+  if (!log) return;
+  const d = allDetails.filter(function(x){ return x.id === detId; })[0];
+  const otherLogs = allRefundLogs.filter(function(l){ return l.detail_id === detId && l.id !== logId; });
+  const otherTotal = otherLogs.reduce(function(s,l){ return s + (l.refund_amount||0); }, 0);
+  const maxAmount = (d ? (d.allowance_amount||0) : 0) - otherTotal;
+
+  document.getElementById('editRefundLogId').value    = logId;
+  document.getElementById('editRefundDetId').value    = detId;
+  document.getElementById('editRefundReqId').value    = reqId;
+  document.getElementById('editRefundAmount').value   = log.refund_amount || 0;
+  document.getElementById('editRefundAmount').max     = maxAmount;
+  document.getElementById('editRefundDate').value     = log.refund_date || '';
+  document.getElementById('editRefundReason').value   = log.refund_reason || '';
+  document.getElementById('editRefundMaxAmount').value = maxAmount;
+  openModal('refundEditModal');
+}
+
+async function saveRefundEdit() {
+  const logId  = document.getElementById('editRefundLogId').value;
+  const detId  = document.getElementById('editRefundDetId').value;
+  const reqId  = document.getElementById('editRefundReqId').value;
+  const amount = parseInt(document.getElementById('editRefundAmount').value) || 0;
+  const date   = document.getElementById('editRefundDate').value;
+  const reason = document.getElementById('editRefundReason').value.trim() || null;
+  const max    = parseInt(document.getElementById('editRefundMaxAmount').value) || 0;
+
+  if (amount <= 0) { toast('金額を入力してください', 'error'); return; }
+  if (amount > max) { toast('金額が上限（¥' + max.toLocaleString() + '）を超えています', 'error'); return; }
+  if (!date)       { toast('日付を入力してください', 'error'); return; }
+
+  const patchLog = await sbPatch('refund_logs?id=eq.' + logId, {
+    refund_amount: amount, refund_date: date, refund_reason: reason
+  });
+  if (patchLog.error) { toast('更新に失敗しました', 'error'); return; }
+
+  // refunded_total を再計算
+  const d = allDetails.filter(function(x){ return x.id === detId; })[0];
+  const otherLogs = allRefundLogs.filter(function(l){ return l.detail_id === detId && l.id !== logId; });
+  const newTotal = otherLogs.reduce(function(s,l){ return s + (l.refund_amount||0); }, 0) + amount;
+  const isFully  = d && newTotal >= (d.allowance_amount||0);
+
+  const patchDet = await sbPatch('travel_allowance_details?id=eq.' + detId, {
+    refunded_total: newTotal, is_refunded: isFully
+  });
+  if (patchDet.error) { toast('明細の更新に失敗しました', 'error'); return; }
+
+  toast('返還履歴を更新しました ✅', 'success');
+  closeModal('refundEditModal');
+  await loadRequests();
+  await showDetail(reqId);
+}
+
+async function deleteRefundLog(logId, detId, reqId) {
+  if (!confirm('この返還履歴を削除しますか？\n削除すると返還額が再計算されます。')) return;
+
+  const delRes = await sbDelete('refund_logs?id=eq.' + logId);
+  if (delRes.error) { toast('削除に失敗しました', 'error'); return; }
+
+  // refunded_total を再計算
+  const d = allDetails.filter(function(x){ return x.id === detId; })[0];
+  const remainingLogs = allRefundLogs.filter(function(l){ return l.detail_id === detId && l.id !== logId; });
+  const newTotal = remainingLogs.reduce(function(s,l){ return s + (l.refund_amount||0); }, 0);
+  const isFully  = d && newTotal >= (d.allowance_amount||0);
+
+  await sbPatch('travel_allowance_details?id=eq.' + detId, {
+    refunded_total: newTotal, is_refunded: isFully
+  });
+
+  toast('返還履歴を削除しました', 'success');
   await loadRequests();
   await showDetail(reqId);
 }
