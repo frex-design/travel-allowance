@@ -2205,14 +2205,18 @@ async function showDetail(id) {
                 ${isFullyRefunded ? '<s>¥0</s>' : '¥' + netAmt.toLocaleString()}
               </td>
               <td style="padding:10px 12px;border-top:1px solid var(--border)">
-                ${isFullyRefunded
-                  ? `<span class="badge badge-refunded">全額返還済</span>`
-                  : isPartial
-                    ? `<span class="badge badge-pending" style="font-size:10px">一部返還</span>
-                       <button class="btn btn-danger btn-sm" style="margin-left:6px" onclick="openRefundModal('${d.id}','${r.id}')">返還処理</button>`
-                    : `<span class="badge badge-paid">支給</span>
-                       <button class="btn btn-danger btn-sm" style="margin-left:6px" onclick="openRefundModal('${d.id}','${r.id}')">返還処理</button>`
-                }
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                  ${isFullyRefunded
+                    ? `<span class="badge badge-refunded">全額返還済</span>
+                       <button class="btn btn-ghost btn-sm" onclick="revertRefund('${d.id}','${r.id}')">↩️ 元に戻す</button>`
+                    : isPartial
+                      ? `<span class="badge badge-pending" style="font-size:10px">一部返還</span>
+                         <button class="btn btn-danger btn-sm" onclick="openRefundModal('${d.id}','${r.id}')">返還処理</button>
+                         <button class="btn btn-ghost btn-sm" onclick="revertRefund('${d.id}','${r.id}')">↩️ 元に戻す</button>`
+                      : `<span class="badge badge-paid">支給</span>
+                         <button class="btn btn-danger btn-sm" onclick="openRefundModal('${d.id}','${r.id}')">返還処理</button>`
+                  }
+                </div>
               </td>
             </tr>${historyRows}`;
           }).join('')}
@@ -2383,6 +2387,26 @@ async function saveRefundEdit() {
 
   toast('返還履歴を更新しました ✅', 'success');
   closeModal('refundEditModal');
+  await loadRequests();
+  await showDetail(reqId);
+}
+
+async function revertRefund(detId, reqId) {
+  const d = allDetails.filter(function(x){ return x.id === detId; })[0];
+  const name = d ? d.employee_name : '';
+  if (!confirm((name ? '「' + name + '」の' : '') + '返還処理をすべて取り消しますか？')) return;
+
+  // 該当する refund_logs を全削除
+  const delRes = await sbDelete('refund_logs?detail_id=eq.' + detId);
+  if (delRes.error) { toast('取り消しに失敗しました', 'error'); return; }
+
+  // travel_allowance_details をリセット
+  const patchRes = await sbPatch('travel_allowance_details?id=eq.' + detId, {
+    refunded_total: 0, is_refunded: false, refund_date: null, refund_reason: null
+  });
+  if (patchRes.error) { toast('明細のリセットに失敗しました', 'error'); return; }
+
+  toast('返還処理を取り消しました ✅', 'success');
   await loadRequests();
   await showDetail(reqId);
 }
