@@ -3231,6 +3231,8 @@ async function saveTask() {
   if (id) {
     const res = await sbPatch(`business_tasks?id=eq.${id}`, { task_name: name, description: desc });
     if (res.error) return;
+    // マスタ名変更を、紐づく既存の出張申請にも同期（一覧の業務名がズレないように）
+    await sbPatch(`travel_requests?task_id=eq.${id}`, { task_name: name });
     toast(`「${name}」を更新しました ✅`, 'success');
   } else {
     const res = await sbPost('business_tasks', { task_name: name, description: desc });
