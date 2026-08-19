@@ -1851,6 +1851,18 @@ function showTodayDetail(office) {
     hdr.appendChild(right);
     card.appendChild(hdr);
 
+    // 備考（入力があれば表示・印刷にも反映）
+    if (r.notes) {
+      const noteEl = document.createElement('div');
+      noteEl.style.cssText = 'font-size:12px;color:var(--text2);background:var(--bg);border-left:3px solid #b5601a;border-radius:5px;padding:8px 12px;margin-bottom:10px;white-space:pre-wrap;line-height:1.5';
+      const noteLabel = document.createElement('span');
+      noteLabel.style.cssText = 'font-weight:700;color:#b5601a;margin-right:4px';
+      noteLabel.textContent = '備考：';
+      noteEl.appendChild(noteLabel);
+      noteEl.appendChild(document.createTextNode(r.notes));
+      card.appendChild(noteEl);
+    }
+
     // メンバーテーブル
     const tbl = document.createElement('table');
     tbl.style.cssText = 'width:100%;border-collapse:collapse;border-top:1px solid var(--border)';
